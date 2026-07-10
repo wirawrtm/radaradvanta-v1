@@ -813,6 +813,7 @@ const PartnerEditModal = ({
   isSaving,
   availablePics,
   allCategories,
+  teamProfiles,
 }) => {
   const [newPic, setNewPic] = useState("");
   const [partnerName, setPartnerName] = useState("");
@@ -847,6 +848,17 @@ const PartnerEditModal = ({
     }
   }, [item, availablePics]);
 
+  const picProfile = useMemo(() => {
+    if (!newPic || !teamProfiles) return null;
+    const cleanPic = cleanForMatch(newPic);
+    return teamProfiles[cleanPic] || null;
+  }, [newPic, teamProfiles]);
+
+  const resolvedDda = useMemo(() => {
+    if (!newPic || !teamProfiles) return "";
+    return getDdaOfUser(newPic, newPic, teamProfiles);
+  }, [newPic, teamProfiles]);
+
   if (!isOpen) return null;
 
   const isAdd = !!item?.isAdd;
@@ -861,8 +873,8 @@ const PartnerEditModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-[#181a2c]/50 backdrop-blur-md flex items-center justify-center p-6">
-      <div className="bg-white w-full max-w-[360px] rounded-[24px] p-8 shadow-2xl border border-[#edecff] animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[110] bg-[#181a2c]/50 backdrop-blur-md flex items-center justify-center p-6 overflow-y-auto">
+      <div className="bg-white w-full max-w-[400px] rounded-[24px] p-7 shadow-2xl border border-[#edecff] animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] overflow-y-auto scrollbar-thin">
         <div className="size-14 bg-[#edecff] rounded-full flex items-center justify-center text-primary mb-5">
           <span className="material-symbols-outlined text-[28px]">
             {isAdd ? "add_business" : "manage_accounts"}
@@ -871,7 +883,7 @@ const PartnerEditModal = ({
         <h2 className="text-xl font-semibold text-[#181a2c] leading-tight mb-1">
           {isAdd ? "Tambah Partner" : "Edit Partner"}
         </h2>
-        <p className="text-[11px] text-[#8E94B7] font-semibold uppercase tracking-wider mb-6">
+        <p className="text-[11px] text-[#8E94B7] font-semibold uppercase tracking-wider mb-5">
           {isAdd ? "Buat Partner Baru" : "Sesuaikan Data Partner"}
         </p>
 
@@ -936,19 +948,109 @@ const PartnerEditModal = ({
               </span>
             </div>
           </div>
+
+          {/* Dynamic Hierarchy Relationship & Territory Preview */}
+          {newPic && (
+            <div className="bg-[#f8f9ff] border border-[#e8e9ff] rounded-[18px] p-4.5 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-250">
+              <div className="flex items-center gap-1.5 border-b border-[#edecff] pb-2">
+                <span className="material-symbols-outlined text-primary text-[15px] leading-none">account_tree</span>
+                <span className="text-[10px] text-[#4e5572] font-extrabold uppercase tracking-wider">Preview Hubungan & Wilayah</span>
+              </div>
+
+              {/* Visual Node Tree Path */}
+              <div className="space-y-1 mt-1 pl-1">
+                {/* Node 1: Partner */}
+                <div className="flex items-center gap-2.5">
+                  <div className="size-6 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-primary text-[12px]">storefront</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[8.5px] text-[#8E94B7] font-extrabold uppercase tracking-wider leading-none">MITRA</p>
+                    <p className="text-xs font-bold text-[#181a2c] truncate mt-0.5">
+                      {partnerName.trim() || "Nama Partner"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Connector Line */}
+                <div className="h-3.5 w-0.5 bg-indigo-200/60 ml-3"></div>
+
+                {/* Node 2: PIC */}
+                <div className="flex items-center gap-2.5">
+                  <div className="size-6 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-emerald-600 text-[12px]">person</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[8.5px] text-emerald-600 font-extrabold uppercase tracking-wider leading-none">PIC (Sales)</p>
+                    <p className="text-xs font-bold text-[#181a2c] truncate mt-0.5">{newPic}</p>
+                  </div>
+                </div>
+
+                {/* Node 3: Upline / Supervisor */}
+                {picProfile?.upline && (
+                  <>
+                    <div className="h-3.5 w-0.5 bg-indigo-200/60 ml-3"></div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-6 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-purple-600 text-[12px]">supervisor_account</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[8.5px] text-purple-600 font-extrabold uppercase tracking-wider leading-none">Atasan / Upline</p>
+                        <p className="text-xs font-bold text-[#181a2c] truncate mt-0.5">{picProfile.upline}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Node 4: Resolved DDA Manager */}
+                {resolvedDda && cleanForMatch(resolvedDda) !== cleanForMatch(newPic) && cleanForMatch(resolvedDda) !== cleanForMatch(picProfile?.upline) && (
+                  <>
+                    <div className="h-3.5 w-0.5 bg-indigo-200/60 ml-3"></div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-6 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-amber-600 text-[12px]">manager</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[8.5px] text-amber-600 font-extrabold uppercase tracking-wider leading-none">Manager DDA</p>
+                        <p className="text-xs font-bold text-[#181a2c] truncate mt-0.5">{resolvedDda}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Territory & Group Box */}
+              {(picProfile?.province || picProfile?.group) && (
+                <div className="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-[#edecff] text-[10.5px]">
+                  <div>
+                    <span className="text-[#8E94B7] font-semibold block uppercase text-[8px] tracking-wider">Provinsi Kerja</span>
+                    <span className="font-bold text-slate-700 block mt-0.5 truncate">
+                      {picProfile?.province || "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#8E94B7] font-semibold block uppercase text-[8px] tracking-wider">Grup / Tim</span>
+                    <span className="font-bold text-slate-700 block mt-0.5 truncate">
+                      {picProfile?.group || "-"}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 text-[#635b6e] font-semibold text-xs uppercase tracking-wider hover:bg-[#f4f2ff] rounded-full transition-colors"
+            className="flex-1 py-3 text-[#635b6e] font-semibold text-xs uppercase tracking-wider hover:bg-[#f4f2ff] rounded-full transition-colors cursor-pointer"
           >
             Batal
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving || !partnerName.trim() || !category.trim()}
-            className="flex-[2] py-3 bg-gradient-to-r from-primary to-cyan-400 text-white rounded-full font-semibold text-xs uppercase tracking-wider shadow-[0_4px_12px_rgba(21,75,226,0.25)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-[2] py-3 bg-gradient-to-r from-primary to-cyan-400 text-white rounded-full font-semibold text-xs uppercase tracking-wider shadow-[0_4px_12px_rgba(21,75,226,0.25)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSaving ? "Saving..." : "Simpan"}
           </button>
@@ -1750,6 +1852,200 @@ const Dashboard = ({
 
   const [mappingPic, setMappingPic] = useState("");
   const [mappingCategory, setMappingCategory] = useState("");
+
+  // States for Temporary Relationship/Time Analysis of Channel Partners
+  const [analyseSearch, setAnalyseSearch] = useState("");
+  const [analysePicFilter, setAnalysePicFilter] = useState("ALL");
+  const [analyseCategoryFilter, setAnalyseCategoryFilter] = useState("ALL");
+  const [analyseProvinceFilter, setAnalyseProvinceFilter] = useState("ALL");
+  const [analyseStatusFilter, setAnalyseStatusFilter] = useState("ALL");
+  const [analyseSortBy, setAnalyseSortBy] = useState("sequence"); // "sequence", "firstActivity", "latestActivity", "visits"
+  const [analyseSortOrder, setAnalyseSortOrder] = useState("asc"); // "asc", "desc"
+
+  // Process data for temporary channel partner relationship and addition time analysis
+  const analyseData = useMemo(() => {
+    const parseTimestamp = (timestampStr: any) => {
+      if (!timestampStr) return null;
+      let d;
+      if (typeof timestampStr === "string" && timestampStr.includes("/")) {
+        const parts = timestampStr.split(/[\s/:]+/);
+        if (parts.length >= 3) {
+          // Assume format: DD/MM/YYYY
+          d = new Date(
+            `${parts[2]}-${parts[1]}-${parts[0]}T${parts[3] || "00"}:${parts[4] || "00"}:${parts[5] || "00"}`
+          );
+        } else {
+          d = new Date(timestampStr);
+        }
+      } else {
+        d = new Date(timestampStr);
+      }
+      return d && !isNaN(d.getTime()) ? d : null;
+    };
+
+    return kiosks.map((channel: any, index: number) => {
+      const channelName = String(channel.name || "").trim();
+      const cleanName = cleanForMatch(channelName);
+
+      // Find all matching logs in workingData
+      const matchedVisits = workingData.filter((visit: any) => {
+        const vKiosk = String(visit.kiosk || visit.channel || visit.toko || "").trim();
+        return cleanForMatch(vKiosk) === cleanName;
+      });
+
+      // Parse and sort dates
+      const parsedDates = matchedVisits
+        .map((v: any) => ({
+          date: parseTimestamp(v.timestamp),
+          raw: v.timestamp
+        }))
+        .filter((d: any) => d.date !== null)
+        .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+
+      const firstActivity = parsedDates.length > 0 ? parsedDates[0] : null;
+      const latestActivity = parsedDates.length > 0 ? parsedDates[parsedDates.length - 1] : null;
+
+      // Resolve PIC
+      const resolvedPic = getDdaOfUser(
+        channel.pic || "",
+        userData?.name,
+        computedTeamProfiles,
+      );
+
+      return {
+        id: channel.id || index,
+        sequence: index + 1, // Row index order represents chronological spreadsheet insertion sequence
+        name: channelName,
+        category: String(channel.category || "Uncategorized").trim(),
+        pic: resolvedPic,
+        province: String(channel.province || channel.Province || "-").trim(),
+        area: String(channel.area || channel.Area || "-").trim(),
+        totalVisits: matchedVisits.length,
+        firstActivityDate: firstActivity ? firstActivity.date : null,
+        firstActivityRaw: firstActivity ? firstActivity.raw : null,
+        latestActivityDate: latestActivity ? latestActivity.date : null,
+        latestActivityRaw: latestActivity ? latestActivity.raw : null,
+        status: matchedVisits.length > 0 ? "Active" : "Pending"
+      };
+    });
+  }, [kiosks, workingData, userData, computedTeamProfiles]);
+
+  const filteredAnalyseData = useMemo(() => {
+    return analyseData.filter((item: any) => {
+      // Search
+      if (
+        analyseSearch &&
+        !item.name.toLowerCase().includes(analyseSearch.toLowerCase()) &&
+        !item.pic.toLowerCase().includes(analyseSearch.toLowerCase()) &&
+        !item.area.toLowerCase().includes(analyseSearch.toLowerCase())
+      ) {
+        return false;
+      }
+
+      // PIC Filter
+      if (analysePicFilter !== "ALL" && !matchNames(item.pic, analysePicFilter)) {
+        return false;
+      }
+
+      // Category Filter
+      if (analyseCategoryFilter !== "ALL" && item.category !== analyseCategoryFilter) {
+        return false;
+      }
+
+      // Province Filter
+      if (analyseProvinceFilter !== "ALL" && item.province !== analyseProvinceFilter) {
+        return false;
+      }
+
+      // Status Filter
+      if (analyseStatusFilter !== "ALL") {
+        if (analyseStatusFilter === "ACTIVE" && item.totalVisits === 0) return false;
+        if (analyseStatusFilter === "PENDING" && item.totalVisits > 0) return false;
+      }
+
+      return true;
+    });
+  }, [analyseData, analyseSearch, analysePicFilter, analyseCategoryFilter, analyseProvinceFilter, analyseStatusFilter]);
+
+  const sortedAnalyseData = useMemo(() => {
+    return [...filteredAnalyseData].sort((a: any, b: any) => {
+      let comparison = 0;
+      if (analyseSortBy === "sequence") {
+        comparison = a.sequence - b.sequence;
+      } else if (analyseSortBy === "firstActivity") {
+        if (!a.firstActivityDate && !b.firstActivityDate) comparison = a.sequence - b.sequence;
+        else if (!a.firstActivityDate) return 1;
+        else if (!b.firstActivityDate) return -1;
+        else comparison = a.firstActivityDate.getTime() - b.firstActivityDate.getTime();
+      } else if (analyseSortBy === "latestActivity") {
+        if (!a.latestActivityDate && !b.latestActivityDate) comparison = a.sequence - b.sequence;
+        else if (!a.latestActivityDate) return 1;
+        else if (!b.latestActivityDate) return -1;
+        else comparison = a.latestActivityDate.getTime() - b.latestActivityDate.getTime();
+      } else if (analyseSortBy === "visits") {
+        comparison = a.totalVisits - b.totalVisits;
+      }
+      return analyseSortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [filteredAnalyseData, analyseSortBy, analyseSortOrder]);
+
+  const analyseStats = useMemo(() => {
+    const total = analyseData.length;
+    const active = analyseData.filter((i: any) => i.totalVisits > 0).length;
+    const pending = total - active;
+    const activeRate = total > 0 ? Math.round((active / total) * 100) : 0;
+    
+    const totalVisitsActive = analyseData.reduce((sum: number, i: any) => sum + i.totalVisits, 0);
+    const avgVisits = active > 0 ? (totalVisitsActive / active).toFixed(1) : "0";
+
+    return { total, active, pending, activeRate, avgVisits };
+  }, [analyseData]);
+
+  const chartPicData = useMemo(() => {
+    const picMap: Record<string, { pic: string; Active: number; Pending: number; Total: number }> = {};
+    analyseData.forEach((item: any) => {
+      const pic = item.pic || "Unknown PIC";
+      if (!picMap[pic]) {
+        picMap[pic] = { pic, Active: 0, Pending: 0, Total: 0 };
+      }
+      if (item.totalVisits > 0) {
+        picMap[pic].Active += 1;
+      } else {
+        picMap[pic].Pending += 1;
+      }
+      picMap[pic].Total += 1;
+    });
+    return Object.values(picMap).sort((a: any, b: any) => b.Total - a.Total).slice(0, 8); // Top 8 PICs
+  }, [analyseData]);
+
+  const chartCumulativeData = useMemo(() => {
+    return analyseData.map((item: any, idx: number) => ({
+      sequence: `Row ${item.sequence}`,
+      name: item.name,
+      Count: idx + 1,
+    })).filter((_: any, i: number, arr: any[]) => {
+      if (arr.length <= 25) return true;
+      return i % Math.ceil(arr.length / 25) === 0 || i === arr.length - 1;
+    });
+  }, [analyseData]);
+
+  const chartFirstActivityData = useMemo(() => {
+    const monthMap: Record<string, number> = {};
+    const localMonths = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    
+    analyseData.forEach((item: any) => {
+      if (item.firstActivityDate) {
+        const monthName = localMonths[item.firstActivityDate.getMonth()];
+        const year = item.firstActivityDate.getFullYear();
+        const label = `${monthName} ${year}`;
+        monthMap[label] = (monthMap[label] || 0) + 1;
+      }
+    });
+    return Object.entries(monthMap).map(([Month, Count]) => ({ Month, Count }));
+  }, [analyseData]);
   const [partnerEditModal, setPartnerEditModal] = useState({
     isOpen: false,
     item: null,
@@ -9654,6 +9950,21 @@ const Dashboard = ({
                     <span>Mapping Channel</span>
                   </div>
                 </button>
+                <button
+                  onClick={() => setPartnerSubTab("analyse")}
+                  className={`flex-1 md:flex-initial px-4 py-1.5 rounded-full font-bold text-[9.5px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                    partnerSubTab === "analyse"
+                      ? "bg-gradient-to-r from-primary to-cyan-400 text-white shadow-[0_4px_10px_rgba(21,75,226,0.18)]"
+                      : "text-[#8E94B7] hover:bg-white/50 hover:text-[#181a2c]"
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className="material-symbols-outlined text-[13px] leading-none">
+                      timeline
+                    </span>
+                    <span>Analyse Relationship</span>
+                  </div>
+                </button>
               </div>
           </div>
 
@@ -10092,6 +10403,7 @@ const Dashboard = ({
               compareMembersByLevel(a, b, teamLevels, teamPositions, userData),
             )}
             allCategories={allCategories}
+            teamProfiles={computedTeamProfiles}
           />
           <PartnerDeleteModal
             isOpen={partnerDeleteModal.isOpen}
@@ -11864,6 +12176,371 @@ const Dashboard = ({
           })()}
         </div>
       )}
+
+      {partnerSubTab === "analyse" && (
+        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+          {/* Header Info */}
+          <div className="bg-white rounded-[24px] p-6 border border-[#f0efff] shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-[#181a2c] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">timeline</span>
+                  Temporary Analyse Relationship & Onboarding Timeline
+                </h3>
+                <p className="text-xs text-[#8E94B7] mt-1 font-semibold">
+                  Analisis hubungan kronologis penambahan mitra channel (urutan baris database) dengan waktu aktivitas pertama yang tercatat di sistem (working sheet).
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnalyseSearch("");
+                    setAnalysePicFilter("ALL");
+                    setAnalyseCategoryFilter("ALL");
+                    setAnalyseProvinceFilter("ALL");
+                    setAnalyseStatusFilter("ALL");
+                    setAnalyseSortBy("sequence");
+                    setAnalyseSortOrder("asc");
+                  }}
+                  className="px-4 py-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-full text-xs font-bold text-[#8E94B7] transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                  Reset Filter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-[20px] border border-[#f0efff] shadow-[0_6px_20px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Total Mitra Database</span>
+                <span className="p-1.5 rounded-lg bg-indigo-50 text-primary material-symbols-outlined text-[16px]">storefront</span>
+              </div>
+              <div className="mt-4">
+                <h4 className="text-2xl font-black text-[#181a2c] tracking-tight">{analyseStats.total}</h4>
+                <span className="text-[9.5px] text-[#8E94B7] font-semibold mt-1 block">Baris terdaftar di Google Sheets</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-[20px] border border-[#f0efff] shadow-[0_6px_20px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Mitra Aktif (Inputted)</span>
+                <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 material-symbols-outlined text-[16px]">check_circle</span>
+              </div>
+              <div className="mt-4">
+                <h4 className="text-2xl font-black text-emerald-600 tracking-tight">{analyseStats.active}</h4>
+                <span className="text-[9.5px] text-emerald-600 font-extrabold mt-1 block flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Sudah ada data kunjungan
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-[20px] border border-[#f0efff] shadow-[0_6px_20px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Mitra Pending (No Visit)</span>
+                <span className="p-1.5 rounded-lg bg-amber-50 text-amber-600 material-symbols-outlined text-[16px]">pending</span>
+              </div>
+              <div className="mt-4">
+                <h4 className="text-2xl font-black text-amber-600 tracking-tight">{analyseStats.pending}</h4>
+                <span className="text-[9.5px] text-[#8E94B7] font-semibold mt-1 block">Belum ada aktivitas dilaporkan</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-[20px] border border-[#f0efff] shadow-[0_6px_20px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Aktivasi Rate %</span>
+                <span className="p-1.5 rounded-lg bg-cyan-50 text-cyan-600 material-symbols-outlined text-[16px]">speed</span>
+              </div>
+              <div className="mt-4">
+                <h4 className="text-2xl font-black text-[#181a2c] tracking-tight">{analyseStats.activeRate}%</h4>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-emerald-400 to-cyan-400 h-full rounded-full" 
+                    style={{ width: `${analyseStats.activeRate}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Charts Panel */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Chart 1: PIC Activation Rate */}
+            <div className="bg-white p-6 rounded-[24px] border border-[#f0efff] shadow-[0_8px_30px_rgba(0,0,0,0.01)] flex flex-col">
+              <div className="mb-4">
+                <h4 className="text-sm font-bold text-[#181a2c] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">engineering</span>
+                  Status Aktivasi Channel per PIC
+                </h4>
+                <p className="text-[11px] text-[#8E94B7] font-medium mt-0.5">
+                  Distribusi mitra aktif vs pending di bawah tanggung jawab masing-masing Sales Agronomist.
+                </p>
+              </div>
+              <div className="h-64 w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartPicData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5ff" />
+                    <XAxis dataKey="pic" tick={{ fontSize: 9, fontWeight: 700, fill: "#8E94B7" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fontWeight: 700, fill: "#8E94B7" }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #edecff", fontFamily: "sans-serif", fontSize: "11px" }} 
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, fontWeight: 700, fill: "#181a2c" }} />
+                    <Bar dataKey="Active" name="Aktif (Sudah Diinput)" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Pending" name="Belum Ada Aktivitas" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Chart 2: Cumulative Channel Additions Sequence */}
+            <div className="bg-white p-6 rounded-[24px] border border-[#f0efff] shadow-[0_8px_30px_rgba(0,0,0,0.01)] flex flex-col">
+              <div className="mb-4">
+                <h4 className="text-sm font-bold text-[#181a2c] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+                  Tren Kumulatif Penambahan Mitra
+                </h4>
+                <p className="text-[11px] text-[#8E94B7] font-medium mt-0.5">
+                  Kecepatan/pola penambahan baris data mitra dalam database Google Sheets (kronologis).
+                </p>
+              </div>
+              <div className="h-64 w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartCumulativeData} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#154be2" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#154be2" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5ff" />
+                    <XAxis dataKey="sequence" tick={{ fontSize: 9, fontWeight: 700, fill: "#8E94B7" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9, fontWeight: 700, fill: "#8E94B7" }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ background: "#ffffff", borderRadius: "12px", border: "1px solid #edecff", fontFamily: "sans-serif", fontSize: "11px" }}
+                    />
+                    <Area type="monotone" dataKey="Count" name="Akumulasi Mitra" stroke="#154be2" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCount)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Filters Panel */}
+          <div className="bg-white rounded-[24px] p-6 border border-[#f0efff] shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">filter_alt</span>
+              <span className="text-xs font-black text-[#181a2c] uppercase tracking-wider">Filter & Urutan Analisis</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              {/* Search Term */}
+              <div className="col-span-1 md:col-span-2 lg:col-span-1 flex flex-col gap-1.5">
+                <label className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Cari Mitra / Area</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={analyseSearch}
+                    onChange={(e) => setAnalyseSearch(e.target.value)}
+                    placeholder="Nama mitra, area..."
+                    className="w-full pl-8 pr-3 py-2 border border-[#edecff] bg-slate-50/50 rounded-xl text-xs font-semibold placeholder:text-[#8E94B7]/70 focus:outline-none focus:border-primary/50 transition-all"
+                  />
+                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
+                </div>
+              </div>
+
+              {/* Filter PIC */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Filter PIC</label>
+                <select
+                  value={analysePicFilter}
+                  onChange={(e) => setAnalysePicFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#edecff] bg-slate-50/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 cursor-pointer"
+                >
+                  <option value="ALL">Semua PIC</option>
+                  {teamMembers.map((pic) => (
+                    <option key={pic} value={pic}>{pic}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter Kategori */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Kategori</label>
+                <select
+                  value={analyseCategoryFilter}
+                  onChange={(e) => setAnalyseCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#edecff] bg-slate-50/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 cursor-pointer"
+                >
+                  <option value="ALL">Semua Kategori</option>
+                  <option value="Distributor">Distributor</option>
+                  <option value="R1">R1</option>
+                  <option value="R2">R2</option>
+                  <option value="Uncategorized">Lainnya</option>
+                </select>
+              </div>
+
+              {/* Filter Status */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Status Input</label>
+                <select
+                  value={analyseStatusFilter}
+                  onChange={(e) => setAnalyseStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#edecff] bg-slate-50/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 cursor-pointer"
+                >
+                  <option value="ALL">Semua Status</option>
+                  <option value="ACTIVE">Aktif (Ada Kunjungan)</option>
+                  <option value="PENDING">Pending (Belum Diinput)</option>
+                </select>
+              </div>
+
+              {/* Sort By Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-[#8E94B7] font-extrabold uppercase tracking-wider">Urutkan Berdasarkan</label>
+                <div className="flex gap-1">
+                  <select
+                    value={analyseSortBy}
+                    onChange={(e) => setAnalyseSortBy(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-[#edecff] bg-slate-50/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 cursor-pointer"
+                  >
+                    <option value="sequence">Urutan Penambahan (Row ID)</option>
+                    <option value="firstActivity">Tanggal Pertama Input</option>
+                    <option value="latestActivity">Tanggal Terakhir Input</option>
+                    <option value="visits">Jumlah Kunjungan / Log</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyseSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                    className="px-2.5 bg-slate-50 border border-[#edecff] rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer text-slate-500"
+                    title={analyseSortOrder === "asc" ? "Urutkan Menaik (Ascending)" : "Urutkan Menurun (Descending)"}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {analyseSortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Relationship Timeline List */}
+          <div className="bg-white rounded-[24px] border border-[#f0efff] shadow-[0_8px_30px_rgba(0,0,0,0.02)] overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#f0efff] flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-[#181a2c] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                Timeline Urutan Database & Korelasi Aktivitas ({sortedAnalyseData.length} Mitra)
+              </h4>
+              <span className="text-[10px] text-[#8E94B7] font-extrabold tracking-wider bg-slate-100 px-2 py-0.5 rounded">
+                Chrono-Index Map
+              </span>
+            </div>
+
+            <div className="divide-y divide-[#f5f5ff]">
+              {sortedAnalyseData.length > 0 ? (
+                sortedAnalyseData.map((item: any, idx: number) => {
+                  const isPending = item.totalVisits === 0;
+                  return (
+                    <div 
+                      key={item.id} 
+                      className="p-5 hover:bg-[#fafbff]/50 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-in fade-in duration-150"
+                    >
+                      {/* Chronological Rank & Kiosk Meta */}
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Sequence Rank Badge */}
+                        <div className="size-11 rounded-2xl bg-indigo-50 border border-indigo-100/30 font-black text-primary text-sm flex flex-col items-center justify-center shadow-inner shrink-0">
+                          <span className="text-[9px] text-indigo-400 font-extrabold leading-none uppercase">ROW</span>
+                          <span className="leading-none mt-0.5 font-sans">#{item.sequence}</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-bold text-xs text-[#181a2c] tracking-tight">{item.name}</h5>
+                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-extrabold leading-none ${
+                              item.category === "Distributor" 
+                                ? "bg-purple-50 text-purple-600 border border-purple-100" 
+                                : item.category === "R1" 
+                                  ? "bg-sky-50 text-sky-600 border border-sky-100" 
+                                  : "bg-teal-50 text-teal-600 border border-teal-100"
+                            }`}>
+                              {item.category}
+                            </span>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#8E94B7] font-medium">
+                            <span className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">person</span>
+                              PIC: <strong className="text-slate-700 font-semibold">{item.pic}</strong>
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">map</span>
+                              {item.province} - {item.area}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Activity Logs Analysis */}
+                      <div className="flex flex-wrap items-center gap-4 lg:gap-8 justify-between lg:justify-end min-w-[280px] lg:min-w-0">
+                        {/* First Activity */}
+                        <div className="space-y-0.5">
+                          <span className="text-[9.5px] text-[#8E94B7] font-extrabold uppercase tracking-wider block">Input Pertama Kali</span>
+                          {isPending ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-xl text-[10px] font-extrabold">
+                              <span className="size-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              Belum Ada Data
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[10.5px] font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded px-2 py-0.5 block">
+                              {item.firstActivityRaw}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Latest Activity */}
+                        {!isPending && (
+                          <div className="space-y-0.5">
+                            <span className="text-[9.5px] text-[#8E94B7] font-extrabold uppercase tracking-wider block">Input Terakhir</span>
+                            <span className="font-mono text-[10.5px] font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded px-2 py-0.5 block">
+                              {item.latestActivityRaw}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Status and Visits Count */}
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-[9.5px] text-[#8E94B7] font-extrabold uppercase tracking-wider block">Jumlah Log</span>
+                            <span className={`text-xs font-black block mt-0.5 ${isPending ? "text-slate-400" : "text-primary"}`}>
+                              {item.totalVisits} Kunjungan
+                            </span>
+                          </div>
+                          <div className={`size-8 rounded-full flex items-center justify-center ${
+                            isPending ? "bg-slate-50 text-slate-400" : "bg-emerald-50 text-emerald-600"
+                          }`}>
+                            <span className="material-symbols-outlined text-[18px]">
+                              {isPending ? "hourglass_empty" : "check_circle"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-20 text-center text-[#8E94B7] font-semibold text-xs uppercase tracking-wide">
+                  Tidak ada mitra channel yang cocok dengan kriteria filter.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <LogoutConfirmModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}

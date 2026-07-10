@@ -892,7 +892,7 @@ async function handleGetChannels(user: string) {
       /upline|spv|supervisor/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /area|provinsi|province|wilayah/i.test(String(h).trim()),
+      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -2108,7 +2108,7 @@ async function handleAddPartner(body: any) {
       /provinsi|province/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /^area$/i.test(String(h).trim()),
+      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -2132,9 +2132,34 @@ async function handleAddPartner(body: any) {
 
   let userProvince = body.province || "";
   let userArea = "";
+  let userGroup = body.group || "";
 
-  // Lookup in existing channel data to resolve PIC's Province and Area if possible
-  if (body.pic && data.length > 1) {
+  // 1. Resolve from employee sheet as the primary source of truth for the PIC
+  const empData = await getSheetValues("employee");
+  let resolvedFromEmployee = false;
+  if (empData && empData.length > 1 && body.pic) {
+    const empHeaders = empData[0];
+    const empRow = findEmployeeRow(body.pic, empData);
+    if (empRow) {
+      const pIdx = empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim()));
+      const aIdx = empHeaders.findIndex((h: any) => /area|kabupaten|kota/i.test(String(h).trim()));
+      const gIdx = empHeaders.findIndex((h: any) => /group|tim|divisi|division/i.test(String(h).trim()));
+      
+      if (pIdx !== -1 && empRow[pIdx] !== undefined && empRow[pIdx] !== "") {
+        userProvince = String(empRow[pIdx]).trim();
+      }
+      if (aIdx !== -1 && empRow[aIdx] !== undefined && empRow[aIdx] !== "") {
+        userArea = String(empRow[aIdx]).trim();
+      }
+      if (gIdx !== -1 && empRow[gIdx] !== undefined && empRow[gIdx] !== "") {
+        userGroup = String(empRow[gIdx]).trim();
+      }
+      resolvedFromEmployee = true;
+    }
+  }
+
+  // 2. Lookup in existing channel data as a fallback to resolve PIC's Province and Area if possible
+  if (!resolvedFromEmployee && body.pic && data.length > 1) {
     const cleanPic = cleanForMatch(body.pic);
     const existingPicRow = data.find(
       (row, idxVal) =>
@@ -2149,6 +2174,9 @@ async function handleAddPartner(body: any) {
       if (idx.area !== -1 && existingPicRow[idx.area]) {
         userArea = String(existingPicRow[idx.area]).trim();
       }
+      if (idx.group !== -1 && existingPicRow[idx.group]) {
+        userGroup = String(existingPicRow[idx.group]).trim();
+      }
     }
   }
 
@@ -2158,8 +2186,12 @@ async function handleAddPartner(body: any) {
   if (idx.pic !== -1) newRow[idx.pic] = body.pic || "";
   if (idx.province !== -1) newRow[idx.province] = userProvince || "";
   if (idx.area !== -1) newRow[idx.area] = userArea || "";
+  if (idx.group !== -1) newRow[idx.group] = userGroup || "";
 
-  await appendSheetRow("channel", newRow);
+  const success = await appendSheetRow("channel", newRow);
+  if (!success) {
+    throw new Error("Gagal menyimpan data partner ke Google Sheets. Silakan coba lagi.");
+  }
   
   // Return success with the exact sheet row number as the new ID
   const newId = data.length + 1;
@@ -2192,7 +2224,7 @@ async function handleUpdatePartner(body: any) {
       /provinsi|province/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /^area$/i.test(String(h).trim()),
+      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -2241,9 +2273,34 @@ async function handleUpdatePartner(body: any) {
   if (rowIndex > 0 && rowIndex < data.length) {
     let userProvince = body.province || "";
     let userArea = "";
+    let userGroup = body.group || "";
 
-    // Lookup in existing channel data to resolve PIC's Province and Area if possible
-    if (body.pic && data.length > 1) {
+    // 1. Resolve PIC's province, area, and group from the employee sheet as primary source of truth
+    const empData = await getSheetValues("employee");
+    let resolvedFromEmployee = false;
+    if (empData && empData.length > 1 && body.pic) {
+      const empHeaders = empData[0];
+      const empRow = findEmployeeRow(body.pic, empData);
+      if (empRow) {
+        const pIdx = empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim()));
+        const aIdx = empHeaders.findIndex((h: any) => /area|kabupaten|kota/i.test(String(h).trim()));
+        const gIdx = empHeaders.findIndex((h: any) => /group|tim|divisi|division/i.test(String(h).trim()));
+        
+        if (pIdx !== -1 && empRow[pIdx] !== undefined && empRow[pIdx] !== "") {
+          userProvince = String(empRow[pIdx]).trim();
+        }
+        if (aIdx !== -1 && empRow[aIdx] !== undefined && empRow[aIdx] !== "") {
+          userArea = String(empRow[aIdx]).trim();
+        }
+        if (gIdx !== -1 && empRow[gIdx] !== undefined && empRow[gIdx] !== "") {
+          userGroup = String(empRow[gIdx]).trim();
+        }
+        resolvedFromEmployee = true;
+      }
+    }
+
+    // 2. Lookup in existing channel data to resolve PIC's Province and Area if possible
+    if (!resolvedFromEmployee && body.pic && data.length > 1) {
       const cleanPic = cleanForMatch(body.pic);
       const existingPicRow = data.find(
         (row, idxVal) =>
@@ -2259,6 +2316,9 @@ async function handleUpdatePartner(body: any) {
         if (idx.area !== -1 && existingPicRow[idx.area]) {
           userArea = String(existingPicRow[idx.area]).trim();
         }
+        if (idx.group !== -1 && existingPicRow[idx.group]) {
+          userGroup = String(existingPicRow[idx.group]).trim();
+        }
       }
     }
 
@@ -2270,6 +2330,9 @@ async function handleUpdatePartner(body: any) {
     }
     if (idx.area !== -1) {
       data[rowIndex][idx.area] = userArea || data[rowIndex][idx.area] || "";
+    }
+    if (idx.group !== -1) {
+      data[rowIndex][idx.group] = userGroup || data[rowIndex][idx.group] || "";
     }
     if (idx.channel !== -1 && body.name !== undefined && body.name !== "") {
       data[rowIndex][idx.channel] = body.name;
