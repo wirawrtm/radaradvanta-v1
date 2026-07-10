@@ -883,7 +883,7 @@ async function handleGetChannels(user: string) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -892,7 +892,7 @@ async function handleGetChannels(user: string) {
       /upline|spv|supervisor/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
+      /area|provinsi|province|wilayah/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -1060,7 +1060,7 @@ async function handleGetDrSalesData(user: string) {
     qty: headers.findIndex((h: any) => /qty|quantity/i.test(String(h).trim())),
     type: headers.findIndex((h: any) => /order type/i.test(String(h).trim())),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
     ),
     lot: headers.findIndex((h: any) => /lot/i.test(String(h).trim())),
     desc: headers.findIndex((h: any) =>
@@ -1152,13 +1152,16 @@ async function handleGetLotInfo(lotNo: string) {
   const idx = {
     lot: headers.findIndex((h: any) => /lot/i.test(String(h).trim())),
     desc: headers.findIndex((h: any) =>
-      /material.*desc|description/i.test(String(h).trim()),
+      /material.*desc|description|^hybrid$/i.test(String(h).trim()),
     ),
     dr: headers.findIndex((h: any) =>
-      /dr date|shipping date/i.test(String(h).trim()),
+      /dr date|shipping date|^date$/i.test(String(h).trim()),
     ),
     exp: headers.findIndex((h: any) =>
       /exp date|expired/i.test(String(h).trim()),
+    ),
+    crops: headers.findIndex((h: any) =>
+      /^crops$/i.test(String(h).trim()),
     ),
   };
   if (idx.lot === -1) return { status: "error", message: "Lot column missing" };
@@ -1192,15 +1195,16 @@ async function handleGetLotInfo(lotNo: string) {
         : "Unknown Material";
     const mapInfo = hybridMap[rawDesc.toLowerCase()] || {
       hybrid: rawDesc,
-      crops: "",
+      crops: idx.crops !== -1 ? String(foundRow[idx.crops] || "").trim() : "",
     };
+    const cropsVal = mapInfo.crops || (idx.crops !== -1 ? String(foundRow[idx.crops] || "").trim() : "");
     const drDateVal = idx.dr !== -1 ? foundRow[idx.dr] : "";
 
     return {
       status: "success",
       data: {
         desc: mapInfo.hybrid,
-        crops: mapInfo.crops,
+        crops: cropsVal,
         drDate: idx.dr !== -1 ? formatMyDate(drDateVal) : "N/A",
         expDate: idx.exp !== -1 ? formatMyDate(foundRow[idx.exp]) : "N/A",
         aging: calcMonths(drDateVal, todayDate),
@@ -2096,7 +2100,7 @@ async function handleAddPartner(body: any) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -2108,7 +2112,7 @@ async function handleAddPartner(body: any) {
       /provinsi|province/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
+      /^area$/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -2132,34 +2136,9 @@ async function handleAddPartner(body: any) {
 
   let userProvince = body.province || "";
   let userArea = "";
-  let userGroup = body.group || "";
 
-  // 1. Resolve from employee sheet as the primary source of truth for the PIC
-  const empData = await getSheetValues("employee");
-  let resolvedFromEmployee = false;
-  if (empData && empData.length > 1 && body.pic) {
-    const empHeaders = empData[0];
-    const empRow = findEmployeeRow(body.pic, empData);
-    if (empRow) {
-      const pIdx = empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim()));
-      const aIdx = empHeaders.findIndex((h: any) => /area|kabupaten|kota/i.test(String(h).trim()));
-      const gIdx = empHeaders.findIndex((h: any) => /group|tim|divisi|division/i.test(String(h).trim()));
-      
-      if (pIdx !== -1 && empRow[pIdx] !== undefined && empRow[pIdx] !== "") {
-        userProvince = String(empRow[pIdx]).trim();
-      }
-      if (aIdx !== -1 && empRow[aIdx] !== undefined && empRow[aIdx] !== "") {
-        userArea = String(empRow[aIdx]).trim();
-      }
-      if (gIdx !== -1 && empRow[gIdx] !== undefined && empRow[gIdx] !== "") {
-        userGroup = String(empRow[gIdx]).trim();
-      }
-      resolvedFromEmployee = true;
-    }
-  }
-
-  // 2. Lookup in existing channel data as a fallback to resolve PIC's Province and Area if possible
-  if (!resolvedFromEmployee && body.pic && data.length > 1) {
+  // Lookup in existing channel data to resolve PIC's Province and Area if possible
+  if (body.pic && data.length > 1) {
     const cleanPic = cleanForMatch(body.pic);
     const existingPicRow = data.find(
       (row, idxVal) =>
@@ -2174,8 +2153,31 @@ async function handleAddPartner(body: any) {
       if (idx.area !== -1 && existingPicRow[idx.area]) {
         userArea = String(existingPicRow[idx.area]).trim();
       }
-      if (idx.group !== -1 && existingPicRow[idx.group]) {
-        userGroup = String(existingPicRow[idx.group]).trim();
+    } else {
+      // Lookup in employee sheet
+      try {
+        const empData = await getSheetValues("employee");
+        if (empData && empData.length > 1) {
+          const empHeaders = empData[0];
+          const empIdx = {
+            name: empHeaders.findIndex((h: any) => /nama|name|pic/i.test(String(h).trim())),
+            prov: empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim())),
+            area: empHeaders.findIndex((h: any) => /area/i.test(String(h).trim())),
+          };
+          const empRow = empData.slice(1).find(
+            (row) => empIdx.name !== -1 && cleanForMatch(row[empIdx.name]) === cleanPic
+          );
+          if (empRow) {
+            if (empIdx.prov !== -1 && empRow[empIdx.prov]) {
+              userProvince = String(empRow[empIdx.prov]).trim();
+            }
+            if (empIdx.area !== -1 && empRow[empIdx.area]) {
+              userArea = String(empRow[empIdx.area]).trim();
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error looking up employee for partner province/area:", e);
       }
     }
   }
@@ -2186,12 +2188,8 @@ async function handleAddPartner(body: any) {
   if (idx.pic !== -1) newRow[idx.pic] = body.pic || "";
   if (idx.province !== -1) newRow[idx.province] = userProvince || "";
   if (idx.area !== -1) newRow[idx.area] = userArea || "";
-  if (idx.group !== -1) newRow[idx.group] = userGroup || "";
 
-  const success = await appendSheetRow("channel", newRow);
-  if (!success) {
-    throw new Error("Gagal menyimpan data partner ke Google Sheets. Silakan coba lagi.");
-  }
+  await appendSheetRow("channel", newRow);
   
   // Return success with the exact sheet row number as the new ID
   const newId = data.length + 1;
@@ -2200,6 +2198,42 @@ async function handleAddPartner(body: any) {
     id: newId, 
     message: `Partner "${body.name}" berhasil ditambahkan` 
   };
+}
+
+async function handleAddLot(body: any) {
+  const data = await getSheetValues("dr");
+  if (!data) throw new Error("Sheet 'dr' tidak ditemukan");
+  const headers = data[0];
+  const idx = {
+    lot: headers.findIndex((h: any) => /lot/i.test(String(h).trim())),
+    dr: headers.findIndex((h: any) => /dr date|shipping date|^date$/i.test(String(h).trim())),
+    qty: headers.findIndex((h: any) => /^qty$|^quantity$/i.test(String(h).trim())),
+    desc: headers.findIndex((h: any) => /material.*desc|description|^hybrid$/i.test(String(h).trim())),
+    crops: headers.findIndex((h: any) => /^crops$/i.test(String(h).trim())),
+  };
+
+  if (idx.lot === -1) throw new Error("Kolom nomor LOT tidak ditemukan");
+
+  const cleanLotNo = String(body.lot || "").trim().toUpperCase();
+  if (!cleanLotNo) throw new Error("Nomor LOT tidak boleh kosong");
+
+  // Prevent duplicate LOT in dr table
+  const existing = data.slice(1).find(
+    (row) => idx.lot !== -1 && String(row[idx.lot] || "").trim().toUpperCase() === cleanLotNo
+  );
+  if (existing) {
+    throw new Error(`LOT dengan nomor "${cleanLotNo}" sudah terdaftar di database.`);
+  }
+
+  const newRow = new Array(headers.length).fill("");
+  if (idx.lot !== -1) newRow[idx.lot] = cleanLotNo;
+  if (idx.dr !== -1) newRow[idx.dr] = body.date || "";
+  if (idx.qty !== -1) newRow[idx.qty] = body.qty || "0";
+  if (idx.desc !== -1) newRow[idx.desc] = body.hybrid || "";
+  if (idx.crops !== -1) newRow[idx.crops] = body.crops || "";
+
+  await appendSheetRow("dr", newRow);
+  return { status: "success", message: `LOT "${cleanLotNo}" berhasil didaftarkan` };
 }
 
 async function handleUpdatePartner(body: any) {
@@ -2212,7 +2246,7 @@ async function handleUpdatePartner(body: any) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -2224,7 +2258,7 @@ async function handleUpdatePartner(body: any) {
       /provinsi|province/i.test(String(h).trim()),
     ),
     area: headers.findIndex((h: any) =>
-      /area|kota|kabupaten|wilayah/i.test(String(h).trim()),
+      /^area$/i.test(String(h).trim()),
     ),
     group: headers.findIndex((h: any) =>
       /group|tim|divisi|division/i.test(String(h).trim()),
@@ -2273,34 +2307,9 @@ async function handleUpdatePartner(body: any) {
   if (rowIndex > 0 && rowIndex < data.length) {
     let userProvince = body.province || "";
     let userArea = "";
-    let userGroup = body.group || "";
 
-    // 1. Resolve PIC's province, area, and group from the employee sheet as primary source of truth
-    const empData = await getSheetValues("employee");
-    let resolvedFromEmployee = false;
-    if (empData && empData.length > 1 && body.pic) {
-      const empHeaders = empData[0];
-      const empRow = findEmployeeRow(body.pic, empData);
-      if (empRow) {
-        const pIdx = empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim()));
-        const aIdx = empHeaders.findIndex((h: any) => /area|kabupaten|kota/i.test(String(h).trim()));
-        const gIdx = empHeaders.findIndex((h: any) => /group|tim|divisi|division/i.test(String(h).trim()));
-        
-        if (pIdx !== -1 && empRow[pIdx] !== undefined && empRow[pIdx] !== "") {
-          userProvince = String(empRow[pIdx]).trim();
-        }
-        if (aIdx !== -1 && empRow[aIdx] !== undefined && empRow[aIdx] !== "") {
-          userArea = String(empRow[aIdx]).trim();
-        }
-        if (gIdx !== -1 && empRow[gIdx] !== undefined && empRow[gIdx] !== "") {
-          userGroup = String(empRow[gIdx]).trim();
-        }
-        resolvedFromEmployee = true;
-      }
-    }
-
-    // 2. Lookup in existing channel data to resolve PIC's Province and Area if possible
-    if (!resolvedFromEmployee && body.pic && data.length > 1) {
+    // Lookup in existing channel data to resolve PIC's Province and Area if possible
+    if (body.pic && data.length > 1) {
       const cleanPic = cleanForMatch(body.pic);
       const existingPicRow = data.find(
         (row, idxVal) =>
@@ -2316,9 +2325,6 @@ async function handleUpdatePartner(body: any) {
         if (idx.area !== -1 && existingPicRow[idx.area]) {
           userArea = String(existingPicRow[idx.area]).trim();
         }
-        if (idx.group !== -1 && existingPicRow[idx.group]) {
-          userGroup = String(existingPicRow[idx.group]).trim();
-        }
       }
     }
 
@@ -2330,9 +2336,6 @@ async function handleUpdatePartner(body: any) {
     }
     if (idx.area !== -1) {
       data[rowIndex][idx.area] = userArea || data[rowIndex][idx.area] || "";
-    }
-    if (idx.group !== -1) {
-      data[rowIndex][idx.group] = userGroup || data[rowIndex][idx.group] || "";
     }
     if (idx.channel !== -1 && body.name !== undefined && body.name !== "") {
       data[rowIndex][idx.channel] = body.name;
@@ -2353,7 +2356,7 @@ async function handleDeletePartner(body: any) {
   if (!data) throw new Error("Sheet 'channel' tidak ditemukan");
   const headers = data[0];
   const idxChannel = headers.findIndex((h: any) =>
-    /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
+    /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
   );
 
   if (idxChannel === -1) throw new Error("Kolom nama partner tidak ditemukan di sheet");
@@ -2672,6 +2675,8 @@ app.all("/api", async (req, res) => {
         result = await handleConsolidateDatabase(req.body);
       else if (action === "addPartner")
         result = await handleAddPartner(req.body);
+      else if (action === "addLot")
+        result = await handleAddLot(req.body);
       else if (action === "updatePartner")
         result = await handleUpdatePartner(req.body);
       else if (action === "deletePartner")
