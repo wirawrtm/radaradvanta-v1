@@ -38,9 +38,7 @@ const SCRIPT_URL =
   (import.meta as any).env.VITE_SCRIPT_URL ||
   (window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1" ||
-  window.location.hostname.includes("run.app") ||
-  window.location.hostname.includes("pages.dev") ||
-  window.location.hostname.includes("github.io")
+  window.location.hostname.includes("run.app")
     ? "/api"
     : ORIGINAL_SCRIPT_URL);
 
