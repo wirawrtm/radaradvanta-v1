@@ -2157,52 +2157,7 @@ async function handleAddPartner(body: any) {
   }
 
   let userProvince = body.province || "";
-  let userArea = "";
-
-  // Lookup in existing channel data to resolve PIC's Province and Area if possible
-  if (body.pic && data.length > 1) {
-    const cleanPic = cleanForMatch(body.pic);
-    const existingPicRow = data.find(
-      (row, idxVal) =>
-        idxVal > 0 &&
-        idx.pic !== -1 &&
-        cleanForMatch(row[idx.pic]) === cleanPic
-    );
-    if (existingPicRow) {
-      if (idx.province !== -1 && existingPicRow[idx.province]) {
-        userProvince = String(existingPicRow[idx.province]).trim();
-      }
-      if (idx.area !== -1 && existingPicRow[idx.area]) {
-        userArea = String(existingPicRow[idx.area]).trim();
-      }
-    } else {
-      // Lookup in employee sheet
-      try {
-        const empData = await getSheetValues("employee");
-        if (empData && empData.length > 1) {
-          const empHeaders = empData[0];
-          const empIdx = {
-            name: empHeaders.findIndex((h: any) => /nama|name|pic/i.test(String(h).trim())),
-            prov: empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim())),
-            area: empHeaders.findIndex((h: any) => /area/i.test(String(h).trim())),
-          };
-          const empRow = empData.slice(1).find(
-            (row) => empIdx.name !== -1 && cleanForMatch(row[empIdx.name]) === cleanPic
-          );
-          if (empRow) {
-            if (empIdx.prov !== -1 && empRow[empIdx.prov]) {
-              userProvince = String(empRow[empIdx.prov]).trim();
-            }
-            if (empIdx.area !== -1 && empRow[empIdx.area]) {
-              userArea = String(empRow[empIdx.area]).trim();
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Error looking up employee for partner province/area:", e);
-      }
-    }
-  }
+  let userArea = body.area || body.province || "";
 
   const newRow = new Array(headers.length).fill("");
   if (idx.channel !== -1) newRow[idx.channel] = body.name || "";
@@ -2210,6 +2165,7 @@ async function handleAddPartner(body: any) {
   if (idx.pic !== -1) newRow[idx.pic] = body.pic || "";
   if (idx.province !== -1) newRow[idx.province] = userProvince || "";
   if (idx.area !== -1) newRow[idx.area] = userArea || "";
+  if (idx.group !== -1) newRow[idx.group] = body.group || "";
 
   await appendSheetRow("channel", newRow);
   
@@ -2328,7 +2284,7 @@ async function handleUpdatePartner(body: any) {
 
   if (rowIndex > 0 && rowIndex < data.length) {
     let userProvince = body.province || "";
-    let userArea = "";
+    let userArea = body.area || body.province || "";
 
     // Lookup in existing channel data to resolve PIC's Province and Area if possible
     if (body.pic && data.length > 1) {
@@ -2358,6 +2314,9 @@ async function handleUpdatePartner(body: any) {
     }
     if (idx.area !== -1) {
       data[rowIndex][idx.area] = userArea || data[rowIndex][idx.area] || "";
+    }
+    if (idx.group !== -1 && body.group !== undefined && body.group !== "") {
+      data[rowIndex][idx.group] = body.group;
     }
     if (idx.channel !== -1 && body.name !== undefined && body.name !== "") {
       data[rowIndex][idx.channel] = body.name;
