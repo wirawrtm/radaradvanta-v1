@@ -883,7 +883,7 @@ async function handleGetChannels(user: string) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -1060,7 +1060,7 @@ async function handleGetDrSalesData(user: string) {
     qty: headers.findIndex((h: any) => /qty|quantity/i.test(String(h).trim())),
     type: headers.findIndex((h: any) => /order type/i.test(String(h).trim())),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
     ),
     lot: headers.findIndex((h: any) => /lot/i.test(String(h).trim())),
     desc: headers.findIndex((h: any) =>
@@ -2096,7 +2096,7 @@ async function handleAddPartner(body: any) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -2212,7 +2212,7 @@ async function handleUpdatePartner(body: any) {
       /pic|user|nama|analyst|solution/i.test(String(h).trim()),
     ),
     channel: headers.findIndex((h: any) =>
-      /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
+      /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
     ),
     cat: headers.findIndex((h: any) =>
       /kategori|category|klasifikasi|^cat$/i.test(String(h).trim()),
@@ -2353,7 +2353,7 @@ async function handleDeletePartner(body: any) {
   if (!data) throw new Error("Sheet 'channel' tidak ditemukan");
   const headers = data[0];
   const idxChannel = headers.findIndex((h: any) =>
-    /channel|kiosk|nama toko|toko|name/i.test(String(h).trim()),
+    /channel|kiosk|nama toko|toko|name|mitra|kios/i.test(String(h).trim()),
   );
 
   if (idxChannel === -1) throw new Error("Kolom nama partner tidak ditemukan di sheet");

@@ -1804,6 +1804,24 @@ const Dashboard = ({
   const [isLotNotFound, setIsLotNotFound] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
+  // States for manual entry of new LOTs
+  const [manualHybrid, setManualHybrid] = useState("");
+  const [manualCrop, setManualCrop] = useState("Field Corn");
+  const [manualExpDate, setManualExpDate] = useState("");
+  const [manualDrDate, setManualDrDate] = useState("");
+
+  const uniqueHybrids = useMemo(() => {
+    const list = new Set<string>();
+    drSalesData.forEach((item) => {
+      if (item.hybrid) list.add(item.hybrid);
+      if (item.hybrids) list.add(item.hybrids);
+    });
+    workingData.forEach((item) => {
+      if (item.hybrid) list.add(item.hybrid);
+    });
+    return Array.from(list).sort();
+  }, [drSalesData, workingData]);
+
   // State Tab Partner
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
@@ -3409,7 +3427,43 @@ const Dashboard = ({
   const handleAddLocal = () => {
     if (!lotNo || !qty) return;
     const cleanLot = lotNo.trim().toUpperCase();
-    const cleanHybrid = lotIntel?.desc || "Unknown";
+
+    const formatToSheetDate = (dateStr: string) => {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, "0");
+      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+      return `${day}/${months[d.getMonth()]}/${d.getFullYear()}`;
+    };
+
+    const calculateManualAging = (drDateStr: string) => {
+      if (!drDateStr) return "-";
+      const start = new Date(drDateStr);
+      const today = new Date();
+      if (isNaN(start.getTime())) return "-";
+      return String(Math.round((today.getTime() - start.getTime()) / (1000 * 3600 * 24) / 30.416));
+    };
+
+    let cleanHybrid = "Unknown";
+    let cropsVal = "";
+    let drDateVal = "";
+    let expiredVal = "N/A";
+    let agingVal = "-";
+
+    if (isLotNotFound) {
+      cleanHybrid = manualHybrid.trim() || "Unknown";
+      cropsVal = manualCrop || "Field Corn";
+      drDateVal = manualDrDate ? formatToSheetDate(manualDrDate) : "";
+      expiredVal = manualExpDate ? formatToSheetDate(manualExpDate) : "N/A";
+      agingVal = manualDrDate ? calculateManualAging(manualDrDate) : "-";
+    } else {
+      cleanHybrid = lotIntel?.desc || "Unknown";
+      cropsVal = lotIntel?.crops || "";
+      drDateVal = lotIntel?.drDate || "";
+      expiredVal = lotIntel?.expDate || "N/A";
+      agingVal = lotIntel?.aging || "-";
+    }
 
     const existingItemIndex = workingData.findIndex(
       (item) =>
@@ -3486,11 +3540,11 @@ const Dashboard = ({
         id: "local_" + Date.now(),
         lot: cleanLot,
         hybrid: cleanHybrid,
-        crops: lotIntel?.crops || "",
-        drDate: lotIntel?.drDate || "",
+        crops: cropsVal,
+        drDate: drDateVal,
         stock: Number(qty),
-        aging: lotIntel?.aging || "-",
-        expired: lotIntel?.expDate || "N/A",
+        aging: agingVal,
+        expired: expiredVal,
         kiosk: selectedKiosk,
         condition: "new", // BARU
         isNew: true,
@@ -3505,6 +3559,10 @@ const Dashboard = ({
     setQty("");
     setLotIntel(null);
     setIsLotNotFound(false);
+    setManualHybrid("");
+    setManualCrop("Field Corn");
+    setManualExpDate("");
+    setManualDrDate("");
   };
 
   const handleEditLocal = (id, newQty) => {
@@ -9833,26 +9891,94 @@ const Dashboard = ({
                     )}
 
                   {!isLotChecking && isLotNotFound && (
-                    <div className="bg-red-50/90 border border-red-100 p-3.5 rounded-[18px] flex items-center gap-2.5 animate-in slide-in-from-top-2 shadow-sm">
-                      <span className="material-symbols-outlined text-red-500 text-lg flex-shrink-0">
-                        warning
-                      </span>
-                      <div className="flex flex-col">
-                        <p className="text-xs font-bold text-red-700 leading-tight">
-                          ⚠️ Peringatan: LOT tidak ditemukan!
-                        </p>
-                        <p className="text-[10px] text-red-600/90 mt-0.5 font-medium">
-                          Periksa kembali nomor Batch/Lot Anda untuk menghindari
-                          kesalahan pengisian data.
-                        </p>
+                    <div className="space-y-4 animate-in slide-in-from-top-2">
+                      <div className="bg-red-50/90 border border-red-100 p-3.5 rounded-[18px] flex items-center gap-2.5 shadow-sm">
+                        <span className="material-symbols-outlined text-red-500 text-lg flex-shrink-0">
+                          warning
+                        </span>
+                        <div className="flex flex-col">
+                          <p className="text-xs font-bold text-red-700 leading-tight">
+                            ⚠️ Peringatan: LOT tidak ditemukan!
+                          </p>
+                          <p className="text-[10px] text-red-600/90 mt-0.5 font-medium">
+                            Masukkan detail LOT baru secara manual di bawah ini untuk menambahkannya.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Manual Fields */}
+                      <div className="bg-white/60 backdrop-blur-sm border border-[#edecff] p-4 rounded-[22px] space-y-4 shadow-inner">
+                        <div>
+                          <label className="text-[10px] text-[#8E94B7] font-bold uppercase tracking-wider ml-1 mb-1.5 block">
+                            Nama Hybrid / Deskripsi Produk *
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={manualHybrid}
+                              onChange={(e) => setManualHybrid(e.target.value)}
+                              placeholder="Contoh: ADV808"
+                              className="w-full h-11 bg-white border border-[#edecff] rounded-full px-4 text-xs font-semibold text-[#111] outline-none focus:border-primary transition-all shadow-sm"
+                              list="hybrid-suggestions"
+                              required
+                            />
+                            <datalist id="hybrid-suggestions">
+                              {uniqueHybrids.map((h, i) => (
+                                <option key={i} value={h} />
+                              ))}
+                            </datalist>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] text-[#8E94B7] font-bold uppercase tracking-wider ml-1 mb-1.5 block">
+                              Kategori Crops *
+                            </label>
+                            <select
+                              value={manualCrop}
+                              onChange={(e) => setManualCrop(e.target.value)}
+                              className="w-full h-11 bg-white border border-[#edecff] rounded-full px-3 text-xs font-semibold text-[#111] outline-none focus:border-primary transition-all shadow-sm"
+                              required
+                            >
+                              <option value="Field Corn">Field Corn</option>
+                              <option value="Sweet Corn">Sweet Corn</option>
+                              <option value="Vegetables">Vegetables</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-[#8E94B7] font-bold uppercase tracking-wider ml-1 mb-1.5 block">
+                              Production / Dr Date
+                            </label>
+                            <input
+                              type="date"
+                              value={manualDrDate}
+                              onChange={(e) => setManualDrDate(e.target.value)}
+                              className="w-full h-11 bg-white border border-[#edecff] rounded-full px-3 text-xs font-semibold text-[#111] outline-none focus:border-primary transition-all shadow-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-[#8E94B7] font-bold uppercase tracking-wider ml-1 mb-1.5 block">
+                            Expired Date
+                          </label>
+                          <input
+                            type="date"
+                            value={manualExpDate}
+                            onChange={(e) => setManualExpDate(e.target.value)}
+                            className="w-full h-11 bg-white border border-[#edecff] rounded-full px-3 text-xs font-semibold text-[#111] outline-none focus:border-primary transition-all shadow-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
 
                   <button
                     onClick={handleAddLocal}
-                    disabled={!lotNo || !qty}
-                    className={`w-full h-14 rounded-full font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${!lotNo || !qty ? "bg-[#e0e0fa] text-[#8E94B7] shadow-none cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-[#00D2FF] text-white shadow-[0_8px_20px_rgba(16,185,129,0.2)] hover:opacity-95"}`}
+                    disabled={!lotNo || !qty || (isLotNotFound && !manualHybrid.trim())}
+                    className={`w-full h-14 rounded-full font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${!lotNo || !qty || (isLotNotFound && !manualHybrid.trim()) ? "bg-[#e0e0fa] text-[#8E94B7] shadow-none cursor-not-allowed" : "bg-gradient-to-r from-emerald-500 to-[#00D2FF] text-white shadow-[0_8px_20px_rgba(16,185,129,0.2)] hover:opacity-95"}`}
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       add_box
