@@ -733,6 +733,13 @@ async function handleGetChannels(user: string) {
 
   const empData = await getSheetValues("employee");
   let authorizedPICs = [lowerUser];
+  let isBusinessAnalyst =
+    lowerUser === "adityawiratama" ||
+    lowerUser.includes("adityawiratama") ||
+    lowerUser === "analyst" ||
+    lowerUser === "businessanalyst";
+  let userProvince = "";
+  let userArea = "";
 
   if (empData && empData.length > 0) {
     const empHeaders = empData[0];
@@ -752,14 +759,13 @@ async function handleGetChannels(user: string) {
     };
 
     const matchedRow = findEmployeeRow(user, empData);
-    let isBusinessAnalyst =
-      lowerUser === "adityawiratama" ||
-      lowerUser.includes("adityawiratama") ||
-      lowerUser === "analyst" ||
-      lowerUser === "businessanalyst";
     const userAliases = new Set([lowerUser]);
 
     if (matchedRow) {
+      const provCol = empHeaders.findIndex((h: any) => /province|provinsi/i.test(String(h).trim()));
+      const areaCol = empHeaders.findIndex((h: any) => /area/i.test(String(h).trim()));
+      if (provCol !== -1) userProvince = String(matchedRow[provCol] || "").trim().toLowerCase();
+      if (areaCol !== -1) userArea = String(matchedRow[areaCol] || "").trim().toLowerCase();
       const emailIdx = empHeaders.findIndex((h: any) => /email/i.test(String(h).trim()));
       const userIdx = empHeaders.findIndex((h: any) => /^user$|^username$|^user\s*name$/i.test(String(h).trim().toLowerCase()));
       const rowName = idxE.name !== -1 ? String(matchedRow[idxE.name] || "").trim().toLowerCase() : "";
@@ -970,7 +976,23 @@ async function handleGetChannels(user: string) {
                 .toLowerCase()
             : "";
 
+        const sheetAreaLower = (
+          idx.area !== -1 && row[idx.area] !== "" && row[idx.area] !== undefined
+            ? String(row[idx.area]).trim().toLowerCase()
+            : ""
+        );
+
+        const isSameArea =
+          sheetAreaLower !== "" &&
+          (sheetAreaLower === userProvince ||
+            sheetAreaLower === userArea ||
+            userProvince === "head office" ||
+            userProvince.includes("all") ||
+            userProvince === "");
+
         const isAuth =
+          isBusinessAnalyst ||
+          (picLower === "" && isSameArea) ||
           picLower === lowerUser ||
           (lowerUser !== "" && picLower.includes(lowerUser)) ||
           uplineLower === lowerUser ||
