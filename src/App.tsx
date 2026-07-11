@@ -44,6 +44,9 @@ const SCRIPT_URL =
     ? "/api"
     : APP_SCRIPT_URL;
 
+console.log("Resolved SCRIPT_URL:", SCRIPT_URL, "hostname:", window.location.hostname);
+
+
 
 const cleanForMatch = (s: any) =>
   String(s || "")
@@ -13155,9 +13158,9 @@ export default function App() {
           error: res.message || "Username tidak ditemukan.",
         };
       }
-    } catch (e) {
-      console.warn("Login call error:", e);
-      return { success: false, error: "Terjadi kesalahan jaringan." };
+    } catch (e: any) {
+      console.error("Login call error details:", e);
+      return { success: false, error: `Kesalahan jaringan: ${e.message || String(e)}. URL: ${SCRIPT_URL}` };
     }
   };
 
