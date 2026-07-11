@@ -34,13 +34,8 @@ const ORIGINAL_SCRIPT_URL =
 // Use the local API proxy if we're on localhost or Cloud Run.
 // For Cloudflare/GitHub Pages, we allow /api if the user has set up a proxy/worker, 
 // otherwise we fallback to the Apps Script.
-const SCRIPT_URL =
-  (import.meta as any).env.VITE_SCRIPT_URL ||
-  (window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1" ||
-  window.location.hostname.includes("run.app")
-    ? "/api"
-    : ORIGINAL_SCRIPT_URL);
+const APP_SCRIPT_URL = (import.meta as any).env.VITE_SCRIPT_URL || ORIGINAL_SCRIPT_URL;
+const SCRIPT_URL = "/api";
 
 const cleanForMatch = (s: any) =>
   String(s || "")
@@ -3598,7 +3593,7 @@ const Dashboard = ({
         area: additionalData.area || empArea || additionalData.province || userData?.province || "",
       };
 
-      const targetUrl = isAdd ? ORIGINAL_SCRIPT_URL : SCRIPT_URL;
+      const targetUrl = isAdd ? APP_SCRIPT_URL : SCRIPT_URL;
       const resp = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
@@ -3662,7 +3657,7 @@ const Dashboard = ({
   const handleSaveLot = async (lotData: { lot: string; hybrid: string; crops: string; date: string; qty: number }) => {
     setIsActionLoading(true);
     try {
-      const resp = await fetch(ORIGINAL_SCRIPT_URL, {
+      const resp = await fetch(APP_SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3754,7 +3749,7 @@ const Dashboard = ({
     if (!isAdd && !originalName) return;
     setIsActionLoading(true);
     try {
-      const targetUrl = isAdd ? ORIGINAL_SCRIPT_URL : SCRIPT_URL;
+      const targetUrl = isAdd ? APP_SCRIPT_URL : SCRIPT_URL;
       const resp = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },

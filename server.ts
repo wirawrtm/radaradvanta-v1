@@ -1317,9 +1317,9 @@ async function handleGetUserProfile(user: string) {
     const rowUserLocal = rowEmail.includes("@") ? rowEmail.split("@")[0] : rowEmail;
 
     if (rowUser !== "") {
-      return rowUser === lowerUser || rowEmail === lowerUser;
+      const rowName = String(emp.name || "").trim().toLowerCase(); return rowUser === lowerUser || rowEmail === lowerUser || rowName === lowerUser || rowName.replace(/\s+/g, "") === lowerUser;
     } else {
-      return rowUserLocal === lowerUser || rowEmail === lowerUser;
+      const rowName = String(emp.name || "").trim().toLowerCase(); return rowUserLocal === lowerUser || rowEmail === lowerUser || rowName === lowerUser || rowName.replace(/\s+/g, "") === lowerUser;
     }
   });
 
