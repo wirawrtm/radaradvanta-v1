@@ -511,15 +511,16 @@ async function appendSheetRow(
   if (!sheets) return false;
   invalidateCache(sheetName);
   try {
-    const currentData = await getSheetValues(sheetName);
-    if (!currentData) throw new Error(`Sheet ${sheetName} not found`);
-    currentData.push(sanitizedRow);
-    const success = await updateSheetValues(sheetName, currentData);
-    if (!success) throw new Error(`Failed to update sheet ${sheetName}`);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${sheetName}!A1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [sanitizedRow] },
+    });
     return true;
-  } catch (e: any) {
+  } catch (e) {
     console.error(`Error appending to sheet ${sheetName}:`, e);
-    throw new Error(`Gagal menambahkan data ke Google Sheets: ${e.message}`);
+    return false;
   }
 }
 
