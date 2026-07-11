@@ -817,7 +817,7 @@ const PartnerEditModal = ({
   const [category, setCategory] = useState("");
 
   const categoriesToDisplay = useMemo(() => {
-    const defaultCategories = ["Distributor", "R1", "R2"];
+    const defaultCategories = ["Distributor", "R1", "R2", "Sub-D", "Kiosk"];
     const merged = [...defaultCategories];
     if (allCategories && Array.isArray(allCategories)) {
       allCategories.forEach((cat) => {
@@ -3571,6 +3571,20 @@ const Dashboard = ({
     setIsActionLoading(true);
     try {
       const isAdd = !id || additionalData.isAdd;
+
+      // Get selected PIC profile to automatically populate province, group, and area
+      let empProvince = "";
+      let empGroup = "";
+      let empArea = "";
+      if (newPic && employees && employees.length > 0) {
+        const matchedEmp = employees.find((emp) => matchNames(emp.name, newPic));
+        if (matchedEmp) {
+          empProvince = matchedEmp.province || "";
+          empGroup = matchedEmp.group || "";
+          empArea = matchedEmp.area || matchedEmp.province || "";
+        }
+      }
+
       const payload = {
         action: isAdd ? "addPartner" : "updatePartner",
         id: id || "partner_" + Date.now(),
@@ -3579,9 +3593,9 @@ const Dashboard = ({
         originalName: additionalData.originalName || "",
         category: additionalData.category || "",
         user: userData.name,
-        group: additionalData.group || userData?.group || "",
-        province: additionalData.province || userData?.province || "",
-        area: additionalData.area || additionalData.province || "",
+        group: additionalData.group || empGroup || userData?.group || "",
+        province: additionalData.province || empProvince || userData?.province || "",
+        area: additionalData.area || empArea || additionalData.province || userData?.province || "",
       };
 
       const resp = await fetch(SCRIPT_URL, {
@@ -3985,7 +3999,7 @@ const Dashboard = ({
       cleanForMatch(mappingPic) === "all_team";
     if (isAll) {
       return enrichedKiosks.filter((k) => {
-        return teamMembers.some((m) => matchNames(k.pic, m));
+        return !k.pic || cleanForMatch(k.pic) === "unknown" || teamMembers.some((m) => matchNames(k.pic, m));
       });
     }
     return enrichedKiosks.filter((k) => matchNames(k.pic, mappingPic));
@@ -10232,9 +10246,9 @@ const Dashboard = ({
                       isOpen: true,
                       item: {
                         isAdd: true,
-                        category: mappingCategory || "Kios",
+                        category: mappingCategory || "R2",
                         name: "",
-                        pic: "",
+                        pic: mappingPic && mappingPic !== "ALL_TEAM" ? mappingPic : (userData?.name || ""),
                       },
                     })
                   }
