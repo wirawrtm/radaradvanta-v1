@@ -2080,6 +2080,26 @@ const Dashboard = ({
   };
 
   // State Tab Temp (Temporary Review Page)
+  const [tempSubTab, setTempSubTab] = useState<"working" | "channel">("working");
+  const [crudEditRowId, setCrudEditRowId] = useState<any | null>(null);
+  const [crudEditData, setCrudEditData] = useState<any>({
+    name: "",
+    pic: "",
+    category: "",
+    province: "",
+    area: "",
+    group: ""
+  });
+  const [crudIsAdding, setCrudIsAdding] = useState(false);
+  const [crudAddData, setCrudAddData] = useState<any>({
+    name: "",
+    pic: "",
+    category: "R2",
+    province: "",
+    area: "",
+    group: ""
+  });
+
   const [tempSearchQuery, setTempSearchQuery] = useState("");
   const [tempSortBy, setTempSortBy] = useState("checker");
   const [tempSortOrder, setTempSortOrder] = useState<"asc" | "desc">("asc");
@@ -3559,8 +3579,9 @@ const Dashboard = ({
         originalName: additionalData.originalName || "",
         category: additionalData.category || "",
         user: userData.name,
-        group: userData?.group || "",
-        province: userData?.province || "",
+        group: additionalData.group || userData?.group || "",
+        province: additionalData.province || userData?.province || "",
+        area: additionalData.area || additionalData.province || "",
       };
 
       const resp = await fetch(SCRIPT_URL, {
@@ -3583,7 +3604,7 @@ const Dashboard = ({
             category: payload.category,
             pic: payload.pic,
             upline: "",
-            area: payload.province || "",
+            area: payload.area || payload.province || "",
             group: payload.group || "",
           };
           setKiosks((prev) => [...prev, newPartner]);
@@ -3601,6 +3622,8 @@ const Dashboard = ({
                   name: payload.name || k.name,
                   category: payload.category || k.category,
                   pic: payload.pic,
+                  area: additionalData.area || additionalData.province || k.area || "",
+                  group: additionalData.group || k.group || "",
                 };
               }
               return k;
@@ -11134,74 +11157,153 @@ const Dashboard = ({
                 <span className="text-primary font-bold">Data (Temporary)</span>
               </h1>
               <p className="text-xs text-[#8E94B7] mt-1 font-semibold">
-                Menampilkan data checker, channel, hybrid, dan lot no secara
-                komprehensif.
+                {tempSubTab === "working"
+                  ? "Menampilkan data checker, channel, hybrid, dan lot no secara komprehensif."
+                  : "Kelola data partner (Sheet Channel) secara langsung ke Google Sheets Database."}
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
-              {/* Preview Toggle Button */}
-              <button
-                type="button"
-                id="btn-temp-proceed-consolidate"
-                onClick={() => {
-                  setIsTempProceeded(!isTempProceeded);
-                  setExpandedTempRowId(null); // Close any expanded row during toggle
-                }}
-                className={`w-full sm:w-auto h-10 px-5 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] ${
-                  isTempProceeded
-                    ? "bg-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.3)] hover:bg-amber-600"
-                    : "bg-[#181a2c] text-white shadow-[0_4px_14px_rgba(24,26,44,0.15)] hover:bg-[#252841]"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isTempProceeded ? "visibility_off" : "visibility"}
-                </span>
-                {isTempProceeded ? "Matikan Preview" : "Preview Konsolidasi"}
-              </button>
-
-              {/* Real Database Process Button */}
-              <button
-                type="button"
-                id="btn-temp-process-db-consolidate"
-                disabled={isConsolidatingDb}
-                onClick={handleConsolidateDatabase}
-                className={`w-full sm:w-auto h-10 px-5 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-emerald-600 text-white shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <span
-                  className={`material-symbols-outlined text-[18px] ${isConsolidatingDb ? "animate-spin" : ""}`}
+            {tempSubTab === "working" ? (
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+                {/* Preview Toggle Button */}
+                <button
+                  type="button"
+                  id="btn-temp-proceed-consolidate"
+                  onClick={() => {
+                    setIsTempProceeded(!isTempProceeded);
+                    setExpandedTempRowId(null); // Close any expanded row during toggle
+                  }}
+                  className={`w-full sm:w-auto h-10 px-5 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] ${
+                    isTempProceeded
+                      ? "bg-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.3)] hover:bg-amber-600"
+                      : "bg-[#181a2c] text-white shadow-[0_4px_14px_rgba(24,26,44,0.15)] hover:bg-[#252841]"
+                  }`}
                 >
-                  {isConsolidatingDb ? "sync" : "auto_mode"}
-                </span>
-                {isConsolidatingDb ? "Memproses..." : "Proses Konsolidasi"}
-              </button>
+                  <span className="material-symbols-outlined text-[18px]">
+                    {isTempProceeded ? "visibility_off" : "visibility"}
+                  </span>
+                  {isTempProceeded ? "Matikan Preview" : "Preview Konsolidasi"}
+                </button>
 
-              {/* Quick Search Container */}
-              <div className="relative w-full sm:w-64 shrink-0">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                  search
-                </span>
-                <input
-                  type="text"
-                  placeholder="Cari data..."
-                  value={tempSearchQuery}
-                  onChange={(e) => setTempSearchQuery(e.target.value)}
-                  className="w-full h-10 bg-white border border-[#edecff] shadow-sm rounded-full pl-11 pr-10 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-400"
-                />
-                {tempSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setTempSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 flex items-center justify-center cursor-pointer transition-colors"
+                {/* Real Database Process Button */}
+                <button
+                  type="button"
+                  id="btn-temp-process-db-consolidate"
+                  disabled={isConsolidatingDb}
+                  onClick={handleConsolidateDatabase}
+                  className={`w-full sm:w-auto h-10 px-5 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-emerald-600 text-white shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <span
+                    className={`material-symbols-outlined text-[18px] ${isConsolidatingDb ? "animate-spin" : ""}`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">
-                      close
-                    </span>
-                  </button>
-                )}
+                    {isConsolidatingDb ? "sync" : "auto_mode"}
+                  </span>
+                  {isConsolidatingDb ? "Memproses..." : "Proses Konsolidasi"}
+                </button>
+
+                {/* Quick Search Container */}
+                <div className="relative w-full sm:w-64 shrink-0">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Cari data..."
+                    value={tempSearchQuery}
+                    onChange={(e) => setTempSearchQuery(e.target.value)}
+                    className="w-full h-10 bg-white border border-[#edecff] shadow-sm rounded-full pl-11 pr-10 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-400"
+                  />
+                  {tempSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTempSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 flex items-center justify-center cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        close
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+                <button
+                  type="button"
+                  id="btn-temp-refresh-channels"
+                  onClick={async () => {
+                    setIsChannelsLoading(true);
+                    setChannelsRefreshKey((prev) => prev + 1);
+                  }}
+                  className="w-full sm:w-auto h-10 px-5 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-[#181a2c] text-white shadow-[0_4px_14px_rgba(24,26,44,0.15)] hover:bg-[#252841]"
+                >
+                  <span className={`material-symbols-outlined text-[18px] ${isChannelsLoading ? "animate-spin" : ""}`}>
+                    sync
+                  </span>
+                  Refresh Data
+                </button>
+                <div className="relative w-full sm:w-64 shrink-0">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Cari partner..."
+                    value={tempSearchQuery}
+                    onChange={(e) => setTempSearchQuery(e.target.value)}
+                    className="w-full h-10 bg-white border border-[#edecff] shadow-sm rounded-full pl-11 pr-10 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-gray-400"
+                  />
+                  {tempSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTempSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 flex items-center justify-center cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        close
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Sub-Tab Selector Navigation */}
+          <div className="mb-6 flex border-b border-gray-100 ml-1">
+            <button
+              onClick={() => {
+                setTempSubTab("working");
+                setTempSearchQuery("");
+              }}
+              className={`pb-3 px-6 font-extrabold text-xs tracking-wider uppercase border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+                tempSubTab === "working"
+                  ? "border-[#154be2] text-[#154be2]"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">table_chart</span>
+              Konsolidasi & Review (Sheet Working)
+            </button>
+            <button
+              id="tab-temp-database-crud"
+              onClick={() => {
+                setTempSubTab("channel");
+                setTempSearchQuery("");
+              }}
+              className={`pb-3 px-6 font-extrabold text-xs tracking-wider uppercase border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+                tempSubTab === "channel"
+                  ? "border-[#154be2] text-[#154be2]"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">database</span>
+              Direct Database CRUD (Sheet Channel)
+            </button>
+          </div>
+
+          {tempSubTab === "working" && (
+            <>
 
           {/* Petunjuk Konsolidasi & Sinkronisasi */}
           <div className="mb-6 bg-amber-50/70 border border-amber-200/80 rounded-2xl p-5 shadow-sm ml-1 text-[#181a2c]">
@@ -12068,6 +12170,458 @@ const Dashboard = ({
               </>
             );
           })()}
+          </>)}
+
+          {tempSubTab === "channel" && (
+            <div className="animate-in fade-in duration-300">
+              {/* Direct Database Connection Banner */}
+              <div className="mb-6 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-5 shadow-sm ml-1 text-[#181a2c]">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex gap-3">
+                    <span className="relative flex h-3 w-3 mt-1.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <div>
+                      <h3 className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                        Direct Database CRUD Mode (Sheet: channel)
+                      </h3>
+                      <p className="text-xs text-emerald-800 leading-relaxed font-semibold">
+                        Koneksi langsung aktif. Semua perubahan penambahan, pembaruan, dan penghapusan partner akan langsung tersimpan secara realtime di Google Sheets.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Create Toggle Button */}
+                  <button
+                    onClick={() => setCrudIsAdding(!crudIsAdding)}
+                    className="h-9 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer bg-[#154be2] text-white shadow-sm hover:bg-[#154be2]/90 self-start md:self-auto shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {crudIsAdding ? "remove" : "add"}
+                    </span>
+                    {crudIsAdding ? "Tutup Form" : "Tambah Partner Baru"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Partner Collapse Form */}
+              {crudIsAdding && (
+                <div className="mb-6 bg-white border border-[#edecff] rounded-2xl p-6 shadow-sm ml-1 animate-in slide-in-from-top-4 duration-300">
+                  <h3 className="text-sm font-black text-[#181a2c] mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">add_circle</span>
+                    Form Tambah Partner Baru
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {/* Input Nama */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Nama Partner / Toko *</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: TOKO TANI JAYA"
+                        value={crudAddData.name}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                    {/* Input PIC */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Nama PIC Sales *</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Listianto"
+                        value={crudAddData.pic}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, pic: e.target.value }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                    {/* Input Kategori */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Kategori *</label>
+                      <select
+                        value={crudAddData.category}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, category: e.target.value }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      >
+                        <option value="R2">R2 (Retailer 2)</option>
+                        <option value="R1">R1 (Retailer 1)</option>
+                        <option value="Distributor">Distributor</option>
+                        <option value="Sub-D">Sub-D</option>
+                        <option value="Kiosk">Kiosk</option>
+                      </select>
+                    </div>
+                    {/* Input Provinsi */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Provinsi</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: West Java"
+                        value={crudAddData.province}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, province: e.target.value }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                    {/* Input Area */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Area Wilayah</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Priangan"
+                        value={crudAddData.area}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, area: e.target.value }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                    {/* Input Group/Tim */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Tim / Divisi</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Tim A"
+                        value={crudAddData.group}
+                        onChange={(e) => setCrudAddData(prev => ({ ...prev, group: e.target.value }))}
+                        className="h-10 bg-white border border-[#edecff] rounded-xl px-4 font-bold text-xs text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 flex justify-end gap-3 border-t border-[#edecff] pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCrudIsAdding(false);
+                        setCrudAddData({ name: "", pic: "", category: "R2", province: "", area: "", group: "" });
+                      }}
+                      className="h-10 px-5 rounded-full font-bold text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer active:scale-95 transition-all"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!crudAddData.name.trim()) {
+                          alert("Nama partner wajib diisi!");
+                          return;
+                        }
+                        if (!crudAddData.pic.trim()) {
+                          alert("PIC wajib diisi!");
+                          return;
+                        }
+                        try {
+                          await handleEditPartnerSave(null, crudAddData.pic, {
+                            name: crudAddData.name,
+                            category: crudAddData.category,
+                            province: crudAddData.province || crudAddData.area || "",
+                            area: crudAddData.area || "",
+                            group: crudAddData.group || "",
+                            isAdd: true
+                          });
+                          setCrudAddData({ name: "", pic: "", category: "R2", province: "", area: "", group: "" });
+                          setCrudIsAdding(false);
+                        } catch (err: any) {
+                          alert("Error: " + err.message);
+                        }
+                      }}
+                      disabled={isActionLoading}
+                      className="h-10 px-6 rounded-full font-extrabold text-xs bg-[#154be2] text-white shadow-sm hover:bg-[#154be2]/90 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isActionLoading ? "Menyimpan..." : "Simpan ke Database"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats Overview */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6 ml-1">
+                <div className="bg-white border border-[#edecff] rounded-2xl p-4 shadow-sm flex items-center gap-4 animate-in fade-in duration-300">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                    <span className="material-symbols-outlined text-[22px]">storefront</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Total Partner</h4>
+                    <p className="text-lg font-black text-[#181a2c]">{kiosks.length}</p>
+                  </div>
+                </div>
+                <div className="bg-white border border-[#edecff] rounded-2xl p-4 shadow-sm flex items-center gap-4 animate-in fade-in duration-300 delay-75">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <span className="material-symbols-outlined text-[22px]">category</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Kategori Aktif</h4>
+                    <p className="text-lg font-black text-[#181a2c]">
+                      {Array.from(new Set(kiosks.map((k: any) => k.category).filter(Boolean))).length}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white border border-[#edecff] rounded-2xl p-4 shadow-sm flex items-center gap-4 animate-in fade-in duration-300 delay-150">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <span className="material-symbols-outlined text-[22px]">group</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-extrabold text-[#8E94B7] uppercase tracking-wider">Unique PIC Sales</h4>
+                    <p className="text-lg font-black text-[#181a2c]">
+                      {Array.from(new Set(kiosks.map((k: any) => k.pic).filter(Boolean))).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Partner Table */}
+              <div className="bg-white border border-[#edecff] rounded-2xl shadow-sm overflow-hidden ml-1">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#fafbfe] border-b border-[#edecff] text-[#8E94B7] font-bold text-[10px] uppercase tracking-wider">
+                        <th className="py-4 px-6 text-center w-24">Row ID</th>
+                        <th className="py-4 px-4 min-w-[200px]">Nama Partner (Toko)</th>
+                        <th className="py-4 px-4 min-w-[150px]">PIC Sales</th>
+                        <th className="py-4 px-4 w-40">Kategori</th>
+                        <th className="py-4 px-4">Provinsi</th>
+                        <th className="py-4 px-4">Area Wilayah</th>
+                        <th className="py-4 px-4">Tim</th>
+                        <th className="py-4 px-6 text-center w-40">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#edecff]">
+                      {(() => {
+                        const filtered = kiosks.filter((item: any) => {
+                          if (!tempSearchQuery) return true;
+                          const q = tempSearchQuery.toLowerCase();
+                          return (
+                            String(item.name || "").toLowerCase().includes(q) ||
+                            String(item.pic || "").toLowerCase().includes(q) ||
+                            String(item.category || "").toLowerCase().includes(q) ||
+                            String(item.area || "").toLowerCase().includes(q) ||
+                            String(item.group || "").toLowerCase().includes(q)
+                          );
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={8} className="py-12 text-center text-[#8E94B7] font-semibold text-xs">
+                                Tidak ada data partner ditemukan yang cocok dengan "{tempSearchQuery}"
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filtered.map((item: any) => {
+                          const isEditing = crudEditRowId === item.id;
+                          return (
+                            <tr
+                              key={item.id}
+                              className={`text-xs text-[#181a2c] font-bold hover:bg-slate-50/50 transition-colors ${isEditing ? "bg-blue-50/30" : ""}`}
+                            >
+                              {/* Row ID */}
+                              <td className="py-4 px-6 text-center text-[#8E94B7] font-mono font-medium">
+                                {item.id}
+                              </td>
+
+                              {/* Nama Partner */}
+                              <td className="py-3 px-4">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={crudEditData.name}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20"
+                                  />
+                                ) : (
+                                  <span className="text-[#181a2c] font-bold text-xs tracking-tight">{item.name}</span>
+                                )}
+                              </td>
+
+                              {/* PIC Sales */}
+                              <td className="py-3 px-4">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={crudEditData.pic}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, pic: e.target.value }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20"
+                                  />
+                                ) : (
+                                  <span className="text-slate-600 font-semibold">{item.pic || "-"}</span>
+                                )}
+                              </td>
+
+                              {/* Kategori */}
+                              <td className="py-3 px-4">
+                                {isEditing ? (
+                                  <select
+                                    value={crudEditData.category}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, category: e.target.value }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-[#181a2c] outline-none focus:ring-1 focus:ring-primary/20"
+                                  >
+                                    <option value="R2">R2 (Retailer 2)</option>
+                                    <option value="R1">R1 (Retailer 1)</option>
+                                    <option value="Distributor">Distributor</option>
+                                    <option value="Sub-D">Sub-D</option>
+                                    <option value="Kiosk">Kiosk</option>
+                                  </select>
+                                ) : (
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block ${
+                                    item.category === "Distributor" || item.category === "Sub-D"
+                                      ? "bg-purple-50 text-purple-600"
+                                      : item.category === "R2" || item.category === "R1"
+                                      ? "bg-blue-50 text-blue-600"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {item.category || "Uncategorized"}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Provinsi */}
+                              <td className="py-3 px-4 text-slate-500">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={crudEditData.province}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, province: e.target.value }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-slate-600 outline-none focus:ring-1 focus:ring-primary/20"
+                                  />
+                                ) : (
+                                  item.area || "-"
+                                )}
+                              </td>
+
+                              {/* Area */}
+                              <td className="py-3 px-4 text-slate-500">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={crudEditData.area}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, area: e.target.value }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-slate-600 outline-none focus:ring-1 focus:ring-primary/20"
+                                  />
+                                ) : (
+                                  item.area || "-"
+                                )}
+                              </td>
+
+                              {/* Tim */}
+                              <td className="py-3 px-4 text-slate-500">
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={crudEditData.group}
+                                    onChange={(e) => setCrudEditData(prev => ({ ...prev, group: e.target.value }))}
+                                    className="w-full h-8 px-2 border border-[#edecff] rounded-lg bg-white text-xs font-bold text-slate-600 outline-none focus:ring-1 focus:ring-primary/20"
+                                  />
+                                ) : (
+                                  item.group || "-"
+                                )}
+                              </td>
+
+                              {/* Aksi */}
+                              <td className="py-3 px-6 text-center">
+                                {isEditing ? (
+                                  <div className="flex items-center justify-center gap-1.5 animate-in fade-in duration-250">
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await handleEditPartnerSave(item.id, crudEditData.pic, {
+                                            name: crudEditData.name,
+                                            originalName: item.name,
+                                            category: crudEditData.category,
+                                            province: crudEditData.province,
+                                            area: crudEditData.area,
+                                            group: crudEditData.group,
+                                            isAdd: false
+                                          });
+                                          setCrudEditRowId(null);
+                                        } catch (err: any) {
+                                          alert("Error: " + err.message);
+                                        }
+                                      }}
+                                      disabled={isActionLoading}
+                                      className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
+                                      title="Simpan"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">done</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setCrudEditRowId(null)}
+                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-all cursor-pointer flex items-center justify-center"
+                                      title="Batal"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">close</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-1.5 animate-in fade-in duration-250">
+                                    <button
+                                      onClick={() => {
+                                        setCrudEditRowId(item.id);
+                                        setCrudEditData({
+                                          name: item.name || "",
+                                          pic: item.pic || "",
+                                          category: item.category || "",
+                                          province: item.area || "",
+                                          area: item.area || "",
+                                          group: item.group || ""
+                                        });
+                                      }}
+                                      className="p-1 text-[#154be2] hover:bg-blue-50 rounded transition-all cursor-pointer flex items-center justify-center"
+                                      title="Ubah Partner"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(`Apakah Anda yakin ingin menghapus partner "${item.name}"?`)) {
+                                          setIsActionLoading(true);
+                                          try {
+                                            const resp = await fetch(SCRIPT_URL, {
+                                              method: "POST",
+                                              headers: { "Content-Type": "text/plain" },
+                                              body: JSON.stringify({
+                                                action: "deletePartner",
+                                                id: item.id,
+                                                name: item.name,
+                                                user: userData.name,
+                                              }),
+                                            });
+                                            const res = await resp.json();
+                                            if (res.status === "success") {
+                                              setKiosks((prev) => prev.filter((k) => String(k.id) !== String(item.id)));
+                                              setChannelsRefreshKey((prev) => prev + 1);
+                                              alert(res.message || "Partner berhasil dihapus");
+                                            } else {
+                                              alert("Gagal: " + res.message);
+                                            }
+                                          } catch (err: any) {
+                                            alert("Error: " + err.message);
+                                          } finally {
+                                            setIsActionLoading(false);
+                                          }
+                                        }
+                                      }}
+                                      className="p-1 text-rose-500 hover:bg-rose-50 rounded transition-all cursor-pointer flex items-center justify-center"
+                                      title="Hapus Partner"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+                {kiosks.length > 0 && (
+                  <div className="py-3.5 px-6 border-t border-[#edecff] bg-slate-50/30 text-[10px] text-[#8E94B7] font-bold text-right uppercase tracking-wider">
+                    Total Partner Terdaftar: {kiosks.length} Baris
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
       <LogoutConfirmModal
