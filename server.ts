@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { google } from "googleapis";
@@ -8,6 +9,7 @@ import fs from "fs";
 dotenv.config();
 
 const app = express();
+app.use(cors());
 const PORT = 3000;
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "local_sheets_db.json");

@@ -34,7 +34,8 @@ const ORIGINAL_SCRIPT_URL =
 // Use the local API proxy if we're on localhost or Cloud Run.
 // For Cloudflare/GitHub Pages, we allow /api if the user has set up a proxy/worker, 
 // otherwise we fallback to the Apps Script.
-const APP_SCRIPT_URL = (import.meta as any).env.VITE_SCRIPT_URL || ORIGINAL_SCRIPT_URL;
+const DEFAULT_BACKEND_URL = "https://ais-pre-qxrsujzymebwmjt4c5ujg3-961275344911.asia-southeast1.run.app/api";
+const APP_SCRIPT_URL = (import.meta as any).env.VITE_SCRIPT_URL || DEFAULT_BACKEND_URL;
 const SCRIPT_URL = 
   (window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1" ||
