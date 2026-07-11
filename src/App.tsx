@@ -28,19 +28,7 @@ import {
   LabelList,
 } from "recharts";
 
-const ORIGINAL_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxUUPKhsEo-LencnYjex3gOhVl7w2tS154VCICVbqGfFSBLAwzv0P7XOu9oMTE1jTUg1g/exec";
-
-// Use the local API proxy if we're on localhost or Cloud Run.
-// For Cloudflare/GitHub Pages, we allow /api if the user has set up a proxy/worker, 
-// otherwise we fallback to the Apps Script.
-const SCRIPT_URL =
-  (import.meta as any).env.VITE_SCRIPT_URL ||
-  (window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1" ||
-  window.location.hostname.includes("run.app")
-    ? "/api"
-    : ORIGINAL_SCRIPT_URL);
+const API_URL = "/api";
 
 const cleanForMatch = (s: any) =>
   String(s || "")
@@ -1986,7 +1974,7 @@ const Dashboard = ({
       console.error('Failed to save access rules', e);
     }
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -2510,7 +2498,7 @@ const Dashboard = ({
       return;
     }
     setIsEmployeesLoading(true);
-    fetch(`${SCRIPT_URL}?action=getEmployees`)
+    fetch(`${API_URL}?action=getEmployees`)
       .then((res) => res.json())
       .then((res) => {
         if (
@@ -2784,10 +2772,10 @@ const Dashboard = ({
         try {
           const [resp, respDr] = await Promise.all([
             fetch(
-              `${SCRIPT_URL}?action=getWorkingData&user=${encodeURIComponent(userData.name)}`,
+              `${API_URL}?action=getWorkingData&user=${encodeURIComponent(userData.name)}`,
             ),
             fetch(
-              `${SCRIPT_URL}?action=getDrSalesData&user=${encodeURIComponent(userData.name)}`,
+              `${API_URL}?action=getDrSalesData&user=${encodeURIComponent(userData.name)}`,
             ),
           ]);
           const [res, resDr] = await Promise.all([resp.json(), respDr.json()]);
@@ -2956,7 +2944,7 @@ const Dashboard = ({
         let success = false;
         try {
           const resp = await fetch(
-            `${SCRIPT_URL}?action=getChannels&user=${encodeURIComponent(userData.name)}`,
+            `${API_URL}?action=getChannels&user=${encodeURIComponent(userData.name)}`,
           );
           const res = await resp.json();
           if (
@@ -3020,7 +3008,7 @@ const Dashboard = ({
 
       try {
         const resp = await fetch(
-          `${SCRIPT_URL}?action=getInitialData&user=${encodeURIComponent(userData.name)}`,
+          `${API_URL}?action=getInitialData&user=${encodeURIComponent(userData.name)}`,
         );
         const res = await resp.json();
 
@@ -3137,17 +3125,17 @@ const Dashboard = ({
     const loadIndividualDataFallback = async () => {
       try {
         const [respEmp, respChan, respWork, respDr, respAccess] = await Promise.all([
-          fetch(`${SCRIPT_URL}?action=getEmployees`),
+          fetch(`${API_URL}?action=getEmployees`),
           fetch(
-            `${SCRIPT_URL}?action=getChannels&user=${encodeURIComponent(userData.name)}`,
+            `${API_URL}?action=getChannels&user=${encodeURIComponent(userData.name)}`,
           ),
           fetch(
-            `${SCRIPT_URL}?action=getWorkingData&user=${encodeURIComponent(userData.name)}`,
+            `${API_URL}?action=getWorkingData&user=${encodeURIComponent(userData.name)}`,
           ),
           fetch(
-            `${SCRIPT_URL}?action=getDrSalesData&user=${encodeURIComponent(userData.name)}`,
+            `${API_URL}?action=getDrSalesData&user=${encodeURIComponent(userData.name)}`,
           ),
-          fetch(`${SCRIPT_URL}?action=getAccessRules`),
+          fetch(`${API_URL}?action=getAccessRules`),
         ]);
         const [resEmp, resChan, resWork, resDr, resAccess] = await Promise.all([
           respEmp.json(),
@@ -3249,7 +3237,7 @@ const Dashboard = ({
       setIsLotChecking(true);
       try {
         const resp = await fetch(
-          `${SCRIPT_URL}?action=getLotInfo&lot=${encodeURIComponent(lotNo)}`,
+          `${API_URL}?action=getLotInfo&lot=${encodeURIComponent(lotNo)}`,
         );
         const res = await resp.json();
         if (res.status === "success" && res.data) {
@@ -3499,7 +3487,7 @@ const Dashboard = ({
     setIsFetchingData(true);
     setIsSyncing(true);
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3531,7 +3519,7 @@ const Dashboard = ({
   const handleConsolidateDatabase = async () => {
     setIsConsolidatingDb(true);
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3588,17 +3576,19 @@ const Dashboard = ({
       const payload = {
         action: isAdd ? "addPartner" : "updatePartner",
         id: id || "partner_" + Date.now(),
-        pic: newPic,
+        pic: newPic || "",
         name: additionalData.name || "",
         originalName: additionalData.originalName || "",
-        category: additionalData.category || "",
-        user: userData.name,
+        category: additionalData.category || "R2",
+        user: userData?.name || "System",
         group: additionalData.group || empGroup || userData?.group || "",
         province: additionalData.province || empProvince || userData?.province || "",
         area: additionalData.area || empArea || additionalData.province || userData?.province || "",
       };
 
-      const resp = await fetch(SCRIPT_URL, {
+      console.log("Sending payload to API:", payload);
+
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload),
@@ -3606,7 +3596,9 @@ const Dashboard = ({
 
       const contentType = resp.headers.get("content-type");
       if (!resp.ok || !contentType || !contentType.includes("application/json")) {
-        throw new Error("Respon server tidak valid. Pastikan backend sudah terkonfigurasi.");
+        let errText = "Unknown error";
+        try { errText = await resp.text(); } catch(e) {}
+        throw new Error(`Respon server tidak valid atau terjadi CORS error. [Status: ${resp.status}] ${errText}`);
       }
 
       const res = await resp.json();
@@ -3652,7 +3644,7 @@ const Dashboard = ({
       }
     } catch (e: any) {
       console.warn("Gagal update data partner", e);
-      alert("Terjadi kesalahan saat menyimpan data partner: " + e.message);
+      alert("TERJADI KESALAHAN KONEKSI/DATABASE: \n" + e.message + "\n\nData gagal diupload ke database. Pastikan format sudah benar.");
     } finally {
       setIsActionLoading(false);
     }
@@ -3661,7 +3653,7 @@ const Dashboard = ({
   const handleSaveLot = async (lotData: { lot: string; hybrid: string; crops: string; date: string; qty: number }) => {
     setIsActionLoading(true);
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3701,8 +3693,8 @@ const Dashboard = ({
     const targetName = partnerDeleteModal.item.name;
     setIsActionLoading(true);
     try {
-      console.log("[Delete] Sending request to:", SCRIPT_URL);
-      const resp = await fetch(SCRIPT_URL, {
+      console.log("[Delete] Sending request to:", API_URL);
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3753,7 +3745,7 @@ const Dashboard = ({
     if (!isAdd && !originalName) return;
     setIsActionLoading(true);
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -3804,7 +3796,7 @@ const Dashboard = ({
     if (!employeeDeleteModal.item?.name) return;
     setIsActionLoading(true);
     try {
-      const resp = await fetch(SCRIPT_URL, {
+      const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
@@ -12588,7 +12580,7 @@ const Dashboard = ({
                                         if (confirm(`Apakah Anda yakin ingin menghapus partner "${item.name}"?`)) {
                                           setIsActionLoading(true);
                                           try {
-                                            const resp = await fetch(SCRIPT_URL, {
+                                            const resp = await fetch(API_URL, {
                                               method: "POST",
                                               headers: { "Content-Type": "text/plain" },
                                               body: JSON.stringify({
@@ -13097,10 +13089,10 @@ export default function App() {
   }, []);
 
   const handleLogin = async (name, password) => {
-    // Attempt to real login using Apps Script endpoint
+    // Attempt to real login using API endpoint
     try {
       const resp = await fetch(
-        `${SCRIPT_URL}?action=getUserProfile&user=${encodeURIComponent(name)}`,
+        `${API_URL}?action=getUserProfile&user=${encodeURIComponent(name)}`,
       );
       const res = await resp.json();
 
@@ -13128,7 +13120,7 @@ export default function App() {
 
         // Fetch and set actual access rules on login to prevent flashing of unauthorized tabs
         try {
-          const accessResp = await fetch(`${SCRIPT_URL}?action=getAccessRules`);
+          const accessResp = await fetch(`${API_URL}?action=getAccessRules`);
           const accessRes = await accessResp.json();
           if (accessRes.status === "success" && accessRes.data && Object.keys(accessRes.data).length > 0) {
             setAccessRules(accessRes.data);
