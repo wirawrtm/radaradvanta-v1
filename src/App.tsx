@@ -28,7 +28,19 @@ import {
   LabelList,
 } from "recharts";
 
-const API_URL = "/api";
+const ORIGINAL_API_URL =
+  "https://script.google.com/macros/s/AKfycbxUUPKhsEo-LencnYjex3gOhVl7w2tS154VCICVbqGfFSBLAwzv0P7XOu9oMTE1jTUg1g/exec";
+
+// Use the local API proxy if we're on localhost or Cloud Run.
+// For Cloudflare/GitHub Pages, we allow /api if the user has set up a proxy/worker, 
+// otherwise we fallback to the Apps Script.
+const API_URL =
+  (import.meta as any).env.VITE_API_URL ||
+  (window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname.includes("run.app")
+    ? "/api"
+    : ORIGINAL_API_URL);
 
 const cleanForMatch = (s: any) =>
   String(s || "")
