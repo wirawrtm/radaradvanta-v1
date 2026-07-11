@@ -35,7 +35,14 @@ const ORIGINAL_SCRIPT_URL =
 // For Cloudflare/GitHub Pages, we allow /api if the user has set up a proxy/worker, 
 // otherwise we fallback to the Apps Script.
 const APP_SCRIPT_URL = (import.meta as any).env.VITE_SCRIPT_URL || ORIGINAL_SCRIPT_URL;
-const SCRIPT_URL = "/api";
+const SCRIPT_URL = 
+  (window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname.includes("run.app") ||
+  window.location.hostname.includes("cloud.google.com"))
+    ? "/api"
+    : APP_SCRIPT_URL;
+
 
 const cleanForMatch = (s: any) =>
   String(s || "")
